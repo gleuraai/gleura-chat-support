@@ -1,0 +1,23 @@
+version: 1
+applications:
+  - appRoot: .
+    frontend:
+      phases:
+        preBuild:
+          commands:
+            - npm ci
+            - npx prisma generate
+        build:
+          commands:
+            # If you run schema migrations in CI/CD (recommended):
+            - npx prisma migrate deploy
+            - npm run build
+      artifacts:
+        baseDirectory: build
+        files:
+          - '**/*'
+      cache:
+        paths:
+          - node_modules/**/*
+    # SSR NOTE: Remix on Amplify uses Node server.
+    # If you're using Amplify SSR hosting, enable "Server-side rendering" in console.

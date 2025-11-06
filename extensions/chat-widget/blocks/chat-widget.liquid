@@ -1,0 +1,53 @@
+{% schema %}
+{
+  "name": "AI Chat Assistant",
+  "target": "body",
+  "enabled_on": { "templates": ["*"] },
+  "settings": [
+    { "type": "checkbox", "id": "enabled", "default": true, "label": "Enable Chat Widget" },
+    { "type": "text", "id": "widget_title", "default": "Chat Support", "label": "Chat Widget Title" },
+    { "type": "color", "id": "primary_color", "default": "#2563EB", "label": "Primary Color" },
+
+    { "type": "header", "content": "Return / Exchange message" },
+    { "type": "textarea", "id": "return_exchange_message", "default": "You can start a return or exchange by emailing support with your order number. Return window is 30 days for unused items in original packaging.", "label": "Message shown when user taps Return / Exchange" },
+
+    { "type": "header", "content": "Shipping & Delivery message" },
+    { "type": "textarea", "id": "shipping_delivery_message", "default": "Orders ship within 1–2 business days. Standard delivery takes 3–5 business days. You’ll receive tracking via email/SMS once shipped.", "label": "Message shown when user taps Shipping & Delivery" },
+
+    { "type": "header", "content": "Support contact" },
+    { "type": "text", "id": "support_phone", "default": "+1 (555) 000-0000", "label": "Support phone" },
+    { "type": "text", "id": "support_email", "default": "support@example.com", "label": "Support email" },
+    { "type": "text", "id": "support_hours", "default": "Mon–Fri 9am–6pm IST", "label": "Support hours" },
+
+    { "type": "header", "content": "Backend API" },
+    { "type": "text", "id": "api_url", "default": "https://YOUR-REMIX-APP.example.com/api/chat", "label": "API URL (HTTPS or leave blank to use /api/chat)" }
+  ]
+}
+{% endschema %}
+
+{% assign enabled   = section.settings.enabled                 | default: block.settings.enabled %}
+{% assign title     = section.settings.widget_title            | default: block.settings.widget_title %}
+{% assign color     = section.settings.primary_color           | default: block.settings.primary_color %}
+{% assign ret_msg   = section.settings.return_exchange_message | default: block.settings.return_exchange_message %}
+{% assign ship_msg  = section.settings.shipping_delivery_message | default: block.settings.shipping_delivery_message %}
+{% assign sup_phone = section.settings.support_phone           | default: block.settings.support_phone %}
+{% assign sup_email = section.settings.support_email           | default: block.settings.support_email %}
+{% assign sup_hours = section.settings.support_hours           | default: block.settings.support_hours %}
+{% assign api_url   = section.settings.api_url                 | default: block.settings.api_url %}
+
+{% if enabled %}
+  <div id="ai-chat-data"
+       data-shop="{{ shop.domain | escape }}"
+       data-title="{{ title | escape }}"
+       data-primary-color="{{ color }}"
+       data-return-msg="{{ ret_msg | escape }}"
+       data-ship-msg="{{ ship_msg | escape }}"
+       data-support-phone="{{ sup_phone | escape }}"
+       data-support-email="{{ sup_email | escape }}"
+       data-support-hours="{{ sup_hours | escape }}"
+       data-api-url="{{ api_url | escape }}"
+       style="display:none"></div>
+
+  {%- assign ts = 'now' | date: '%s' -%}
+  <script src="{{ 'chat-widget.js' | asset_url }}?v={{ ts }}" defer></script>
+{% endif %}
