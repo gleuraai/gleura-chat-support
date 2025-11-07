@@ -1,9 +1,11 @@
-// chat-widget.js — Mobile-friendly FINAL
-// - Bottom-sheet layout on mobile (≤768px)
-// - Safe-area insets, body scroll lock, keyboard-aware scrolling
-// - Send button inside the input (unchanged behavior)
+// chat-widget.js — Mobile-friendly FINAL (clean order card + AWB link)
+// - NEW: Fixed tracking number wrap (90px -> 80px grid)
+// - Initial buttons wrap, follow-up buttons are a slider.
+// - Lowered floating mobile window
+// - Simplified date (no time)
+// - Robust API handling: {response} OR {order:{...}} OR {message}
 
-console.log("🚀 Chat widget v7 (mobile-final) loaded");
+console.log("🚀 Chat widget v15 (Tracking Wrap Fix) loaded");
 if (window.__AIW_INIT__) { console.warn("AI widget already initialized — skipping."); throw new Error("AIW_DUP_INIT"); }
 window.__AIW_INIT__ = true;
 
@@ -11,7 +13,7 @@ class SimpleAIChatWidget {
   constructor() {
     this.isOpen = false;
     this.sessionId = this.generateSessionId();
-    this.apiUrl = "http://localhost:60308/api/chat"; // ← set prod URL
+    this.apiUrl = "/apps/chat"; // Shopify App Proxy
 
     const dataEl = document.getElementById("ai-chat-data");
     if (!dataEl) return console.error("❌ ai-chat-data missing");
@@ -20,8 +22,6 @@ class SimpleAIChatWidget {
     this.settings = {
       title: dataEl.dataset.title || "Chat Support",
       primaryColor: dataEl.dataset.primaryColor || "#2563EB",
-
-      // Optional owner-configured messages / contacts:
       returnMsg: dataEl.dataset.returnMsg || "",
       shipMsg: dataEl.dataset.shipMsg || "",
       supportPhone: dataEl.dataset.supportPhone || "",
@@ -41,11 +41,23 @@ class SimpleAIChatWidget {
   messagesEl(){ return document.getElementById("aiw-messages"); }
   cleanOrder(id){ return (id||"").replace(/[^0-9A-Za-z]/g,"").toUpperCase(); }
   generateSessionId(){ return `sess_${Date.now()}_${Math.random().toString(36).slice(2)}`; }
-
-  scrollToBottom() {
-    const m = this.messagesEl();
-    if (m) m.scrollTop = m.scrollHeight;
+  scrollToBottom() { const m = this.messagesEl(); if (m) m.scrollTop = m.scrollHeight; }
+  esc(s){ return String(s ?? "").replaceAll("&","&amp;").replaceAll("<","&lt;").replaceAll(">","&gt;").replaceAll('"',"&quot;"); }
+  
+  fmtDate(s){
+    if(!s) return "—";
+    const d = new Date(s);
+    if(Number.isNaN(d.getTime())) return this.esc(s);
+    return d.toLocaleString("en-IN",{year:"numeric",month:"short",day:"2-digit",hour:"2-digit",minute:"2-digit"});
   }
+  fmtDateOnly(s){
+    if(!s) return "—";
+    const d = new Date(s);
+    if(Number.isNaN(d.getTime())) return this.esc(s);
+    return d.toLocaleString("en-IN",{year:"numeric",month:"short",day:"2-digit"});
+  }
+
+  money(amt, cur){ return (amt==null ? "—" : `${amt}${cur ? " " + cur : ""}`); }
 
   // --- UI
   createWidget() {
@@ -124,8 +136,8 @@ class SimpleAIChatWidget {
     avatar.innerHTML = this.botIconFace("#111");
 
     const title = document.createElement("div");
-    title.innerHTML = `<div style="font-weight:800;font-size:14px">${this.settings.title}</div>
-                       <div style="font-size:12px;color:#64748b">Online</div>`;
+    title.innerHTML = `<div style="font-weight:800;font-size:14px">${this.esc(this.settings.title)}</div>
+                        <div style="font-size:12px;color:#64748b">Online</div>`;
 
     const closeBtn = document.createElement("button");
     closeBtn.id = "aiw-close";
@@ -147,7 +159,7 @@ class SimpleAIChatWidget {
       padding: "16px",
       overflowY: "auto",
       background: "#fff",
-      WebkitOverflowScrolling: "touch" // smoother iOS scroll
+      WebkitOverflowScrolling: "touch"
     });
 
     // Intro + actions
@@ -156,13 +168,13 @@ class SimpleAIChatWidget {
     );
     this.renderMainActions(messages);
 
-    // Composer (send button inside)
+    // Composer
     const composer = document.createElement("div");
     Object.assign(composer.style, {
       borderTop: "1px solid #eef2f7",
       background: "#fff",
       padding: "10px 12px",
-      paddingBottom: this.isMobile() ? this.safe("10px") : "10px"
+      paddingBottom: "10px"
     });
 
     const inputWrap = document.createElement("div");
@@ -180,7 +192,7 @@ class SimpleAIChatWidget {
       border: "1px solid #e5e7eb",
       borderRadius: "9999px",
       outline: "none",
-      fontSize: "16px" // bigger on mobile for accessibility
+      fontSize: "16px"
     });
 
     const sendFab = document.createElement("button");
@@ -202,8 +214,6 @@ class SimpleAIChatWidget {
       cursor:"pointer"
     });
     sendFab.innerHTML = this.paperPlaneSVG("#fff");
-
-    // Micro interaction
     sendFab.addEventListener("mousedown",()=>sendFab.style.transform="translateY(-50%) scale(.96)");
     const resetSend = ()=>sendFab.style.transform="translateY(-50%) scale(1)";
     sendFab.addEventListener("mouseup", resetSend);
@@ -217,7 +227,8 @@ class SimpleAIChatWidget {
     footer.id = "aiw-powered";
     Object.assign(footer.style,{
       fontSize:"12px", color:"#8e9bae", textAlign:"center",
-      padding: this.isMobile() ? this.safe("8px") : "8px",
+      padding: "8px",
+      paddingBottom: this.isMobile() ? this.safe("8px") : "8px",
       borderTop:"1px solid #eef2f7", background:"#fff"
     });
     footer.innerHTML = `Powered by <a href="https://gleura.ai" target="_blank" rel="noopener noreferrer" style="color:${this.settings.primaryColor};text-decoration:none;font-weight:600">Gleura AI</a>`;
@@ -234,7 +245,6 @@ class SimpleAIChatWidget {
     this.launcherEl = launcher;
     this.windowEl = win;
 
-    // Apply responsive sizing now & on resize
     const apply = ()=>this.applyResponsive();
     apply();
     window.addEventListener("resize", apply, { passive:true });
@@ -246,35 +256,43 @@ class SimpleAIChatWidget {
     if (!win) return;
 
     if (isM) {
-      // Bottom sheet: full width with margins, taller, rounded top
-      win.style.left = "8px";
-      win.style.right = "8px";
-      win.style.width = "auto";
-      win.style.bottom = this.safe("8px");
-      win.style.top = "12vh"; // sheet height ≈ 88vh
-      win.style.height = "auto";
-      win.style.borderRadius = "16px";
+      // --- FLOATING MOBILE STYLES (Fixes keyboard bug) ---
+      win.style.left = "auto";
+      win.style.right = "14px"; 
+      win.style.width = "calc(100vw - 28px)"; 
+      win.style.maxWidth = "392px"; 
+      win.style.bottom = this.safe("74px"); 
+      win.style.top = "auto";
+      win.style.height = "calc(100vh - 86px)"; 
+      win.style.maxHeight = "580px"; 
+      win.style.borderRadius = "20px";
     } else {
+      // --- DESKTOP STYLES (Unchanged) ---
       win.style.left = "auto";
       win.style.right = "20px";
-      win.style.bottom = "86px";
+      win.style.bottom = "86px"; 
       win.style.top = "auto";
       win.style.width = "392px";
       win.style.height = "580px";
       win.style.borderRadius = "20px";
     }
 
-    // Adjust launcher bottom for safe-area
     if (this.launcherEl) {
       this.launcherEl.style.bottom = this.safe(isM ? "14px" : "16px");
       this.launcherEl.style.right = isM ? "14px" : "16px";
     }
   }
 
-  // --- Actions menu
+  // --- Actions menu (Initial Buttons = WRAPPING)
   renderMainActions(container) {
     const wrap = document.createElement("div");
-    Object.assign(wrap.style,{ display:"flex", flexWrap:"wrap", gap:"8px", margin:"10px 0 12px 44px" });
+    Object.assign(wrap.style,{ 
+      display:"flex", 
+      gap:"8px", 
+      margin:"10px 0 12px 44px",
+      // --- Use wrapping, not scroll ---
+      flexWrap: "wrap"
+    });
 
     const make = (label, onClick) => {
       const b = document.createElement("button");
@@ -293,7 +311,7 @@ class SimpleAIChatWidget {
 
     make("Track Order", ()=>this.startTrack());
     make("Return / Exchange", ()=>this.showOwnerMsg(this.settings.returnMsg || "You can start a return or exchange by emailing support with your order number."));
-    make("Discounts", ()=>this.apiCall({ action:"discounts" }, "SAVE10 — 10% off<br>HOLIDAY20 — 20% off $50+<br>NEWBIE15 — 15% off"));
+    make("Discounts", ()=>this.apiCall({ action:"discounts" }, "SAVE10 — 10% off<br>HOLIDAY20 — 20% off ₹4,000+<br>NEWBIE15 — 15% off"));
     make("Shipping & Delivery", ()=>this.showOwnerMsg(this.settings.shipMsg || "Orders ship within 1–2 business days; standard delivery 3–5 business days."));
     make("Connect to Support", ()=>this.showOwnerMsg(`Phone: ${this.settings.supportPhone || "—"}<br>Email: ${this.settings.supportEmail || "—"}<br>Hours: ${this.settings.supportHours || "—"}`));
 
@@ -303,7 +321,6 @@ class SimpleAIChatWidget {
 
   showOwnerMsg(html) {
     this.addAssistantBubble(this.messagesEl(), html);
-    // Offer top-level options again
     this.addFollowUps([
       { label:"Track Order", onClick:()=>this.startTrack() },
       { label:"Discounts", onClick:()=>this.apiCall({ action:"discounts" },"…") },
@@ -312,10 +329,20 @@ class SimpleAIChatWidget {
     ]);
   }
 
+  // --- Follow-up Buttons (SLIDER)
   addFollowUps(list) {
     const container = this.messagesEl();
     const row = document.createElement("div");
-    Object.assign(row.style,{ display:"flex", flexWrap:"wrap", gap:"8px", margin:"8px 0 0 44px" });
+    Object.assign(row.style,{ 
+      display:"flex", 
+      gap:"8px", 
+      margin:"8px 0 0 44px",
+      // --- Horizontal Scroll "Slider" ---
+      flexWrap: "nowrap",
+      overflowX: "auto",
+      "-webkit-overflow-scrolling": "touch",
+      paddingBottom: "8px" // To make space for scrollbar if it appears
+    });
 
     list.forEach(({ label, onClick }) => {
       const b = document.createElement("button");
@@ -327,7 +354,8 @@ class SimpleAIChatWidget {
         border:"1px solid #e5e7eb",
         fontSize:"13px",
         cursor:"pointer",
-        lineHeight:"1"
+        lineHeight:"1",
+        flexShrink: 0 // Prevent buttons from shrinking
       });
       b.onclick = onClick;
       row.appendChild(b);
@@ -359,7 +387,6 @@ class SimpleAIChatWidget {
     this.addUserBubble(this.messagesEl(), text);
     input.value = "";
 
-    // Intentless → only track flow + API scripted routes
     const { mode, need, ctx } = this.state;
 
     if (mode === "track") {
@@ -380,7 +407,7 @@ class SimpleAIChatWidget {
         this.state = { mode:null, need:null, ctx:{} };
         await this.apiCall(
           { action:"track_order", orderNumber: ctx.orderNumber, phoneNumber: ctx.phone },
-          "Order Date: —<br>Order No: —<br>Order Value: —<br>Status: —<br>Shipping Address: —<br>Tracking: —"
+          this.renderPendingOrder()
         );
         this.addFollowUps([
           { label:"Track another order", onClick:()=>this.startTrack() },
@@ -390,7 +417,6 @@ class SimpleAIChatWidget {
       }
     }
 
-    // Default go to API scripted help (no AI)
     await this.apiCall({ message: text }, "I can help with Track Order, Return/Exchange, Discounts, Shipping & Delivery, or Connect to Support.");
   }
 
@@ -404,11 +430,104 @@ class SimpleAIChatWidget {
         body: JSON.stringify({ ...payload, sessionId: this.sessionId, shop: this.shop })
       });
       let data = {}; try { data = await res.json(); } catch {}
-      this.addAssistantBubble(this.messagesEl(), data.response || fallbackHtml);
+
+      if (typeof data.response === "string" && data.response.trim()) {
+        this.addAssistantBubble(this.messagesEl(), data.response);
+      }
+      else if (data.order && typeof data.order === "object") {
+        this.addAssistantCard(this.messagesEl(), this.renderOrderCard(data.order));
+      }
+      else if (typeof data.message === "string") {
+        this.addAssistantBubble(this.messagesEl(), this.esc(data.message));
+      }
+      else {
+        this.addAssistantBubble(this.messagesEl(), fallbackHtml || "Sorry, I couldn't process that.");
+      }
     } catch {
       this.addAssistantBubble(this.messagesEl(), "Error contacting support.");
     } finally { stop(); }
   }
+
+  // Skeleton while fetching
+  renderPendingOrder(){
+    return `
+      <div style="border:1px solid #e5e7eb;border-radius:16px;padding:12px 14px;background:#fff;">
+        <div style="font-weight:700;margin-bottom:8px;font-size:15px">Order details</div>
+        <div style="display:grid;grid-template-columns:110px 1fr;row-gap:6px;column-gap:10px;font-size:14px;line-height:1.55">
+          <div style="color:#64748b">Order Date</div><div>—</div>
+          <div style="color:#64748b">Order No</div><div>—</div>
+          <div style="color:#64748b">Order Value</div><div>—</div>
+          <div style="color:#64748b">Status</div><div>—</div>
+          <div style="color:#64748b">Shipping Address</div><div>—</div>
+          <div style="color:#64748b">Tracking</div><div>—</div>
+        </div>
+      </div>`;
+  }
+
+  // --- THIS IS THE UPDATED FUNCTION ---
+  // Final order card (clean, less clutter) + AWB link
+  renderOrderCard(o = {}) {
+    const name = this.esc(o.name ?? o.orderNumber ?? "—");
+    
+    const date = this.fmtDateOnly(o.date);
+
+    const value = this.money(o.value, o.currency);
+    const statusRaw = (o.status ?? "—").toString();
+    const status = this.esc(statusRaw.toUpperCase());
+
+    const city = this.esc(o.city);
+    const zip = this.esc(o.zip);
+    const fullAddress = this.esc(o.shippingAddress ?? o.shipping_address ?? "—");
+    const address = (city && zip) ? `${city}, ${zip}` : fullAddress;
+    
+    const addressStyle = (city && zip) 
+        ? "overflow-wrap: break-word; word-break: break-all;" 
+        : "white-space:pre-line; overflow-wrap: break-word; word-break: break-all;";
+
+    const awbRaw =
+      (o.tracking && (o.tracking.number || o.tracking.awb)) ||
+      o.trackingNumber || o.awb || o.tracking || "";
+    const awb = this.esc(awbRaw);
+    const awbUrlRaw =
+      (o.tracking && (o.tracking.url || o.tracking.link)) ||
+      o.trackingUrl || o.tracking_link || (awb ? `https://track.aftership.com/${encodeURIComponent(awbRaw)}` : "");
+    const awbUrl = this.esc(awbUrlRaw);
+
+    const statusColor =
+      /DELIVERED/i.test(statusRaw) ? "#16a34a" :
+      /(SHIPPED|FULFILLED|IN TRANSIT)/i.test(statusRaw) ? "#2563eb" :
+      /CANCELLED/i.test(statusRaw) ? "#ef4444" :
+      "#475569";
+
+    return `
+      <div style="border:1px solid #e5e7eb;border-radius:16px;padding:12px 14px;background:#fff;max-width:100%">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+          <div style="font-weight:700;font-size:15px">Order ${name}</div>
+          <div style="font-size:12px;color:#64748b;background:#f1f5f9;border:1px solid #e2e8f0;border-radius:9999px;padding:4px 8px; white-space: nowrap;">${date}</div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:80px 1fr;row-gap:6px;column-gap:10px;font-size:14px;line-height:1.55">
+          <div style="color:#64748b">Status</div>
+          <div><span style="display:inline-block;border:1px solid #e2e8f0;border-radius:9999px;padding:2px 8px;font-weight:600;color:${statusColor}">${status}</span></div>
+
+          <div style="color:#64748b">Order Value</div>
+          <div style="overflow-wrap: break-word; word-break: break-all;">${this.esc(value)}</div>
+
+          <div style="color:#64748b">Shipping Address</div>
+          <div style="${addressStyle}">${address}</div>
+
+          <div style="color:#64748b">Tracking</div>
+          <div style="overflow-wrap: break-word; word-break: break-all;">${
+            awb
+              ? (awbUrl
+                  ? `<a href="${awbUrl}" target="_blank" rel="noopener noreferrer" style="color:#2563eb;text-decoration:none;font-weight:600">${awb}</a>`
+                  : `<span style="font-weight:600">${awb}</span>`)
+              : "—"
+          }</div>
+        </div>
+      </div>`;
+  }
+  // --- END OF UPDATED FUNCTION ---
 
   addAssistantBubble(container, html) {
     const row = document.createElement("div");
@@ -435,6 +554,31 @@ class SimpleAIChatWidget {
     bubble.innerHTML = html;
 
     row.appendChild(avatar); row.appendChild(bubble);
+    container.appendChild(row);
+    this.scrollToBottom();
+  }
+  
+  addAssistantCard(container, html) {
+    const row = document.createElement("div");
+    Object.assign(row.style,{ display:"flex", gap:"10px", margin:"12px 0", alignItems:"flex-start" });
+
+    const avatar = document.createElement("div");
+    Object.assign(avatar.style,{
+      width:"28px", height:"28px", borderRadius:"9999px", background:"#F4B400", display:"grid", placeItems:"center", flexShrink:"0"
+    });
+    avatar.innerHTML = this.botIconFace("#111");
+    
+    const cardWrapper = document.createElement("div");
+    Object.assign(cardWrapper.style, {
+      maxWidth: "78%",
+      flexGrow: 1,
+      lineHeight: "1.5",
+      wordBreak: "break-word"
+    });
+    cardWrapper.innerHTML = html;
+
+    row.appendChild(avatar);
+    row.appendChild(cardWrapper);
     container.appendChild(row);
     this.scrollToBottom();
   }
@@ -475,42 +619,32 @@ class SimpleAIChatWidget {
     document.getElementById("aiw-send")?.addEventListener("click", ()=>this.sendMessage());
     const input = document.getElementById("aiw-input");
     input?.addEventListener("keypress",(e)=>{ if (e.key === "Enter") this.sendMessage(); });
-
-    // Mobile keyboard handling: keep latest message in view
     input?.addEventListener("focus", ()=>setTimeout(()=>this.scrollToBottom(), 50));
   }
 
   lockBodyScroll() {
-    // prevent background scroll on mobile
-    this._prevOverflow = document.documentElement.style.overflow;
-    document.documentElement.style.overflow = "hidden";
-    this._prevBodyPos = document.body.style.position;
-    document.body.style.position = "fixed";
-    document.body.style.width = "100%";
+    // No longer needed
   }
   unlockBodyScroll() {
-    document.documentElement.style.overflow = this._prevOverflow || "";
-    document.body.style.position = this._prevBodyPos || "";
-    document.body.style.width = "";
+    // No longer needed
   }
 
   toggleChat() {
     const win = this.windowEl; if (!win) return;
     const opening = win.style.visibility !== "visible";
     if (opening) {
-      // hide launcher immediately
       if (this.launcherEl) this.launcherEl.style.display = "none";
       win.style.visibility = "visible";
       win.style.pointerEvents = "auto";
       win.style.opacity = "1";
       win.style.transform = "translateY(0)";
-      if (this.isMobile()) this.lockBodyScroll();
       this.isOpen = true;
       setTimeout(()=>document.getElementById("aiw-input")?.focus(), 50);
     } else {
       this.closeChat();
     }
   }
+
 
   closeChat() {
     const win = this.windowEl; if (!win) return;
@@ -519,7 +653,6 @@ class SimpleAIChatWidget {
     win.style.pointerEvents = "none";
     setTimeout(()=>{ win.style.visibility = "hidden"; }, 200);
     if (this.launcherEl) this.launcherEl.style.display = "grid";
-    if (this.isMobile()) this.unlockBodyScroll();
     this.isOpen = false;
   }
 
