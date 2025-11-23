@@ -6,6 +6,7 @@ frontend:
         - npm ci
     build:
       commands:
+        - npm run setup
         - npm run build
   artifacts:
     baseDirectory: build/client
