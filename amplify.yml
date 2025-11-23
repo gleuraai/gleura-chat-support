@@ -9,9 +9,13 @@ frontend:
         - npm run setup
         - npm run build
   artifacts:
-    baseDirectory: build/client
+    baseDirectory: .
     files:
-      - '**/*'
+      - build/**/*
+      - public/**/*
+      - package.json
+      - prisma/**/*
+      - node_modules/**/*
   cache:
     paths:
       - node_modules/**/*
