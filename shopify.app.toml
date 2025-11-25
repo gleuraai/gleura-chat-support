@@ -2,24 +2,23 @@
 
 client_id = "1ca06cb7e5081fdbd4bde8cbd11da64e"
 name = "Gleura Chat Support"
-application_url = "https://q5lfc3fte6o3srssezxsvhqwwa0wosql.lambda-url.eu-north-1.on.aws/"
+application_url = "https://j2paxwkmmd.eu-central-1.awsapprunner.com/"
 embedded = true
 handle = "gleura-chat-support"
 
 [build]
 automatically_update_urls_on_dev = true
-include_config_on_deploy = true
 
 [webhooks]
 api_version = "2025-07"
 
   [[webhooks.subscriptions]]
   topics = [ "app/uninstalled" ]
-  uri = "https://main.dqeqb8n191dwb.amplifyapp.com/webhooks/app/uninstalled"
+  uri = "https://j2paxwkmmd.eu-central-1.awsapprunner.com/webhooks/app/uninstalled"
 
   [[webhooks.subscriptions]]
   topics = [ "app/scopes_update" ]
-  uri = "https://main.dqeqb8n191dwb.amplifyapp.com/webhooks/app/scopes_update"
+  uri = "https://j2paxwkmmd.eu-central-1.awsapprunner.com/webhooks/app/scopes_update"
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
@@ -29,12 +28,12 @@ use_legacy_install_flow = false
 
 [auth]
 redirect_urls = [
-  "https://q5lfc3fte6o3srssezxsvhqwwa0wosql.lambda-url.eu-north-1.on.aws/auth/callback",
-  "https://q5lfc3fte6o3srssezxsvhqwwa0wosql.lambda-url.eu-north-1.on.aws/auth/shopify/callback"
+  "https://j2paxwkmmd.eu-central-1.awsapprunner.com/auth/callback",
+  "https://j2paxwkmmd.eu-central-1.awsapprunner.com/auth/shopify/callback"
 ]
 
 [app_proxy]
-url = "https://q5lfc3fte6o3srssezxsvhqwwa0wosql.lambda-url.eu-north-1.on.aws/api/chat"
+url = "https://j2paxwkmmd.eu-central-1.awsapprunner.com/api/chat"
 subpath = "chat"
 prefix = "apps"
 
