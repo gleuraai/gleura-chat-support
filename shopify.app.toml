@@ -20,10 +20,6 @@ api_version = "2025-01"
   topics = [ "app/scopes_update" ]
   uri = "https://j2paxwkmmd.eu-central-1.awsapprunner.com/webhooks/app/scopes_update"
 
-  [[webhooks.subscriptions]]
-  compliance_topics = [ "customers/data_request", "customers/redact", "shop/redact" ]
-  uri = "https://j2paxwkmmd.eu-central-1.awsapprunner.com/webhooks/gdpr"
-
 
 
 [access_scopes]
