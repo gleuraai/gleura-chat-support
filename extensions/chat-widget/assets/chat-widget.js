@@ -27,6 +27,7 @@ class SimpleAIChatWidget {
       supportPhone: dataEl.dataset.supportPhone || "",
       supportEmail: dataEl.dataset.supportEmail || "",
       supportHours: dataEl.dataset.supportHours || "",
+      whatsappPhone: dataEl.dataset.whatsappPhone || "", // New setting
     };
 
     this.state = { mode: null, need: null, ctx: {} };
@@ -64,7 +65,7 @@ class SimpleAIChatWidget {
       background: p, border: "none", boxShadow: "0 14px 30px rgba(0,0,0,.18)",
       cursor: "pointer", zIndex: "2147483647", display: "grid", placeItems: "center"
     });
-    launcher.innerHTML = this.paperPlaneSVG("#fff");
+    launcher.innerHTML = this.chatBubbleSVG("#fff", 24);
 
     const win = document.createElement("div");
     win.id = "aiw-window";
@@ -90,9 +91,9 @@ class SimpleAIChatWidget {
     const avatar = document.createElement("div");
     Object.assign(avatar.style, {
       width: "28px", height: "28px", borderRadius: "9999px",
-      background: "#F4B400", display: "grid", placeItems: "center", flexShrink: "0"
+      background: this.settings.primaryColor, display: "grid", placeItems: "center", flexShrink: "0"
     });
-    avatar.innerHTML = this.botIconFace("#111");
+    avatar.innerHTML = this.botIconFace("#fff");
 
     const title = document.createElement("div");
     title.innerHTML = `<div style="font-weight:800;font-size:14px">${this.esc(this.settings.title)}</div>
@@ -224,7 +225,19 @@ class SimpleAIChatWidget {
     make("Return / Exchange", () => this.showOwnerMsg(this.settings.returnMsg || "You can start a return or exchange by emailing support with your order number."));
     make("Discounts", () => this.apiCall({ action: "discounts" }, "SAVE10 — 10% off<br>HOLIDAY20 — 20% off ₹4,000+<br>NEWBIE15 — 15% off"));
     make("Shipping & Delivery", () => this.showOwnerMsg(this.settings.shipMsg || "Orders ship within 1–2 business days; standard delivery 3–5 business days."));
-    make("Connect to Support", () => this.showOwnerMsg(`Phone: ${this.settings.supportPhone || "—"}<br>Email: ${this.settings.supportEmail || "—"}<br>Hours: ${this.settings.supportHours || "—"}`));
+
+    make("Connect to Support", () => {
+      let msg = `Phone: ${this.settings.supportPhone || "—"}<br>Email: ${this.settings.supportEmail || "—"}`;
+      if (this.settings.whatsappPhone) {
+        const val = this.settings.whatsappPhone;
+        const isUrl = val.startsWith("http");
+        const href = isUrl ? val : `https://wa.me/${val.replace(/[^0-9]/g, "")}`;
+        const display = isUrl ? "Chat Link" : val;
+        msg += `<br>WhatsApp: <a href="${href}" target="_blank" style="color:${this.settings.primaryColor};text-decoration:underline">${display}</a>`;
+      }
+      msg += `<br>Hours: ${this.settings.supportHours || "—"}`;
+      this.showOwnerMsg(msg);
+    });
 
     container.appendChild(wrap);
     this.scrollToBottom();
@@ -236,7 +249,20 @@ class SimpleAIChatWidget {
       { label: "Track Order", onClick: () => this.startTrack() },
       { label: "Discounts", onClick: () => this.apiCall({ action: "discounts" }, "…") },
       { label: "Shipping & Delivery", onClick: () => this.showOwnerMsg(this.settings.shipMsg || "…") },
-      { label: "Connect to Support", onClick: () => this.showOwnerMsg(`Phone: ${this.settings.supportPhone || "—"}<br>Email: ${this.settings.supportEmail || "—"}`) },
+      {
+        label: "Connect to Support",
+        onClick: () => {
+          let msg = `Phone: ${this.settings.supportPhone || "—"}<br>Email: ${this.settings.supportEmail || "—"}`;
+          if (this.settings.whatsappPhone) {
+            const val = this.settings.whatsappPhone;
+            const isUrl = val.startsWith("http");
+            const href = isUrl ? val : `https://wa.me/${val.replace(/[^0-9]/g, "")}`;
+            const display = isUrl ? "Chat Link" : val;
+            msg += `<br>WhatsApp: <a href="${href}" target="_blank" style="color:${this.settings.primaryColor};text-decoration:underline">${display}</a>`;
+          }
+          this.showOwnerMsg(msg);
+        }
+      },
     ]);
   }
 
@@ -528,9 +554,9 @@ class SimpleAIChatWidget {
 
     const avatar = document.createElement("div");
     Object.assign(avatar.style, {
-      width: "28px", height: "28px", borderRadius: "9999px", background: "#F4B400", display: "grid", placeItems: "center", flexShrink: "0"
+      width: "28px", height: "28px", borderRadius: "9999px", background: this.settings.primaryColor, display: "grid", placeItems: "center", flexShrink: "0"
     });
-    avatar.innerHTML = this.botIconFace("#111");
+    avatar.innerHTML = this.botIconFace("#fff");
 
     const bubble = document.createElement("div");
     Object.assign(bubble.style, {
@@ -551,9 +577,9 @@ class SimpleAIChatWidget {
 
     const avatar = document.createElement("div");
     Object.assign(avatar.style, {
-      width: "28px", height: "28px", borderRadius: "9999px", background: "#F4B400", display: "grid", placeItems: "center", flexShrink: "0"
+      width: "28px", height: "28px", borderRadius: "9999px", background: this.settings.primaryColor, display: "grid", placeItems: "center", flexShrink: "0"
     });
-    avatar.innerHTML = this.botIconFace("#111");
+    avatar.innerHTML = this.botIconFace("#fff");
 
     const cardWrapper = document.createElement("div");
     Object.assign(cardWrapper.style, { maxWidth: "78%", flexGrow: 1, lineHeight: "1.5", wordBreak: "break-word" });
@@ -630,14 +656,20 @@ class SimpleAIChatWidget {
   }
 
   // ---------- SVG ----------
-  botIconFace(fill = "#111") {
-    return `<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
-      <circle cx="12" cy="12" r="9" fill="${fill}"/>
-      <circle cx="9" cy="11" r="1.2" fill="#F4B400"/>
-      <circle cx="15" cy="11" r="1.2" fill="#F4B400"/>
-      <path d="M9 14c.8 1 2.2 1 3 0" stroke="#F4B400" stroke-width="1.6" stroke-linecap="round" fill="none"/>
+  botIconFace(fill = "#fff") {
+    // Chat Bubble with Dots (White by default)
+    return this.chatBubbleSVG(fill, 16);
+  }
+
+  chatBubbleSVG(fill = "#fff", size = 20) {
+    return `<svg viewBox="0 0 24 24" width="${size}" height="${size}" aria-hidden="true">
+      <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z" fill="${fill}"/>
+      <circle cx="8" cy="11" r="1.5" fill="${fill === '#fff' ? '#2563EB' : '#fff'}" style="opacity:0.9"/>
+      <circle cx="12" cy="11" r="1.5" fill="${fill === '#fff' ? '#2563EB' : '#fff'}" style="opacity:0.9"/>
+      <circle cx="16" cy="11" r="1.5" fill="${fill === '#fff' ? '#2563EB' : '#fff'}" style="opacity:0.9"/>
     </svg>`;
   }
+
   paperPlaneSVG(stroke = "#fff") {
     return `<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
       <path d="M3 11.5l17-7-5.8 15.3-3.3-5.2-5.9-3.1zM10.7 14.6L19.7 4.5"

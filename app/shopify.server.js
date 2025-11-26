@@ -19,19 +19,12 @@ const shopify = shopifyApp({
   distribution: AppDistribution.AppStore,
 
   // ✅ Billing plans (charge in INR for Indian stores, USD otherwise)
-  // NOTE: For JS you can use the string enum for interval.
   billing: {
     // USD variants
-    "Lite 400 USD":    { amount: 5.99,  currencyCode: "USD", interval: "EVERY_30_DAYS" },
-    "Starter 1K USD":  { amount: 11.99, currencyCode: "USD", interval: "EVERY_30_DAYS" },
-    "Growth 2.5K USD": { amount: 23.99, currencyCode: "USD", interval: "EVERY_30_DAYS" },
-    "Scale 5K USD":    { amount: 47.99, currencyCode: "USD", interval: "EVERY_30_DAYS" },
+    "Monthly Subscription": { amount: 9.99, currencyCode: "USD", interval: "EVERY_30_DAYS" },
 
     // INR variants
-    "Lite 400 INR":    { amount: 499,   currencyCode: "INR", interval: "EVERY_30_DAYS" },
-    "Starter 1K INR":  { amount: 999,   currencyCode: "INR", interval: "EVERY_30_DAYS" },
-    "Growth 2.5K INR": { amount: 1999,  currencyCode: "INR", interval: "EVERY_30_DAYS" },
-    "Scale 5K INR":    { amount: 3999,  currencyCode: "INR", interval: "EVERY_30_DAYS" },
+    "Monthly Subscription INR": { amount: 999, currencyCode: "INR", interval: "EVERY_30_DAYS" },
   },
 
   future: {

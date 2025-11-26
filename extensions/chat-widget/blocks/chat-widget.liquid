@@ -18,6 +18,7 @@
     { "type": "text", "id": "support_phone", "default": "+1 (555) 000-0000", "label": "Support phone" },
     { "type": "text", "id": "support_email", "default": "support@example.com", "label": "Support email" },
     { "type": "text", "id": "support_hours", "default": "Mon–Fri 9am–6pm IST", "label": "Support hours" },
+    { "type": "text", "id": "whatsapp_phone", "label": "WhatsApp Link or Number" },
 
     { "type": "header", "content": "Backend API" },
     { "type": "text", "id": "api_url", "default": "https://YOUR-REMIX-APP.example.com/api/chat", "label": "API URL (HTTPS or leave blank to use /api/chat)" }
@@ -33,6 +34,7 @@
 {% assign sup_phone = section.settings.support_phone           | default: block.settings.support_phone %}
 {% assign sup_email = section.settings.support_email           | default: block.settings.support_email %}
 {% assign sup_hours = section.settings.support_hours           | default: block.settings.support_hours %}
+{% assign wa_phone  = section.settings.whatsapp_phone          | default: block.settings.whatsapp_phone %}
 {% assign api_url   = section.settings.api_url                 | default: block.settings.api_url %}
 
 {% if enabled %}
@@ -45,6 +47,7 @@
        data-support-phone="{{ sup_phone | escape }}"
        data-support-email="{{ sup_email | escape }}"
        data-support-hours="{{ sup_hours | escape }}"
+       data-whatsapp-phone="{{ wa_phone | escape }}"
        data-api-url="{{ api_url | escape }}"
        style="display:none"></div>
 

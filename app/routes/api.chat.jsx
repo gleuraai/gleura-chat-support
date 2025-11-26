@@ -54,14 +54,14 @@ export const action = async ({ request }) => {
     }
 
     if (action === "track_order") {
-      if (!shop) return json({ ok: false, error: "MISSING_SHOP", message: "Debug: Missing shop parameter" });
+      if (!shop) return json({ ok: false, error: "MISSING_SHOP", message: "We are unable to identify the store. Please try refreshing the page." });
       if (!orderNumber || !phoneNumber)
-        return json({ ok: false, error: "MISSING_PARAMS", message: "Debug: Missing orderNumber or phoneNumber" });
+        return json({ ok: false, error: "MISSING_PARAMS", message: "Please provide both your order number and phone number." });
 
       const adminToken = proxySession?.accessToken || process.env.SHOPIFY_ADMIN_TOKEN;
       const apiVersion = process.env.SHOPIFY_API_VERSION || "2025-01";
       if (!adminToken) {
-        return json({ ok: false, error: "MISSING_ADMIN_TOKEN", message: "Debug: Could not find Admin Token (checked session and SHOPIFY_ADMIN_TOKEN)" });
+        return json({ ok: false, error: "MISSING_ADMIN_TOKEN", message: "Configuration error: Store access token is missing. Please contact support." });
       }
 
       // Shopify order "name" includes a leading # (e.g. #1001)
@@ -112,7 +112,7 @@ export const action = async ({ request }) => {
       }
 
       if (!ok) {
-        return json({ ok: false, error: "ADMIN_API_ERROR", status: status, message: `Debug: Admin API error ${status}` });
+        return json({ ok: false, error: "ADMIN_API_ERROR", status: status, message: "We encountered a temporary issue checking your order. Please try again later." });
       }
 
       const last10 = (s) => String(s || "").replace(/\D/g, "").slice(-10);
@@ -126,50 +126,25 @@ export const action = async ({ request }) => {
       });
 
       if (!order) {
-        // DEBUG: Fetch the last 3 orders to see what their names look like
-        let debugNames = "";
-        let fetchStatus = "skipped";
-        let fetchError = "";
-        let scopes = "unknown";
+        // If we found orders but none matched the phone, give a hint
+        if (orders.length > 0) {
+          const foundPhones = orders.map(o => {
+            const p1 = last10(o.shipping_address?.phone);
+            const p2 = last10(o.customer?.phone);
+            return p1 || p2 ? `...${(p1 || p2).slice(-4)}` : "No Phone";
+          }).join(", ");
 
-        try {
-          // 1. Fetch recent orders
-          const debugRes = await fetch(`https://${shop}/admin/api/${apiVersion}/orders.json?status=any&limit=3&fields=name`, {
-            headers: { "X-Shopify-Access-Token": adminToken, "Content-Type": "application/json" }
+          return json({
+            ok: false,
+            error: "PHONE_MISMATCH",
+            message: `Found order ${orders[0].name}, but the phone number didn't match. Registered phone ends in: ${foundPhones}.`
           });
-          fetchStatus = debugRes.status;
-          if (debugRes.ok) {
-            const debugData = await debugRes.json();
-            debugNames = (debugData.orders || []).map(o => o.name).join(", ");
-          } else {
-            fetchError = await debugRes.text();
-          }
-
-          // 2. Fetch access scopes to verify permissions
-          const scopeRes = await fetch(`https://${shop}/admin/oauth/access_scopes.json`, {
-            headers: { "X-Shopify-Access-Token": adminToken, "Content-Type": "application/json" }
-          });
-          if (scopeRes.ok) {
-            const scopeData = await scopeRes.json();
-            scopes = (scopeData.access_scopes || []).map(s => s.handle).join(", ");
-          }
-        } catch (e) {
-          fetchError += " | " + e.message;
         }
 
         return json({
           ok: false,
           error: "NOT_FOUND",
-          message: `Debug: Order not found. 
-          Shop: ${shop}
-          Token: ${adminToken ? "Present (" + adminToken.slice(0, 5) + "...)" : "Missing"}
-          Scopes: ${scopes}
-          Search: "${withHash}" / "${withoutHash}"
-          Matches: ${orders.length}
-          Phone: ...${phone10}
-          Recent Fetch: ${fetchStatus}
-          Recent Orders: [${debugNames}]
-          Fetch Error: ${fetchError.slice(0, 100)}`
+          message: "We couldn't find an order with those details. Please double-check your order number and the phone number used at checkout."
         });
       }
 
@@ -201,6 +176,14 @@ export const action = async ({ request }) => {
       return json(payload);
     }
 
+    // Handle discounts action
+    if (action === "discounts") {
+      return json({
+        ok: true,
+        response: "<b>Current Offers:</b><br>• SAVE10 — 10% off<br>• HOLIDAY20 — 20% off orders over ₹4,000<br>• NEWBIE15 — 15% off for new customers"
+      });
+    }
+
     // Handle generic messages (missing action)
     if (!action && body?.message) {
       return json({
@@ -210,10 +193,10 @@ export const action = async ({ request }) => {
     }
 
     // Unknown action
-    return json({ ok: false, error: "UNKNOWN_ACTION", message: "Debug: Unknown action. Please use the buttons." });
+    return json({ ok: false, error: "UNKNOWN_ACTION", message: "I didn't understand that action. Please try using the menu buttons." });
   } catch (e) {
     console.error("api.chat error", e);
     // Always JSON — never HTML
-    return json({ ok: false, error: "INTERNAL_ERROR", message: `Debug: Internal Error: ${e.message}` });
+    return json({ ok: false, error: "INTERNAL_ERROR", message: "Something went wrong on our end. Please try again later." });
   }
 };
