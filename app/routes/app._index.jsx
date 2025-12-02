@@ -1,6 +1,6 @@
 // app/routes/app._index.jsx
 import { json } from "@remix-run/node";
-import { useLoaderData } from "@remix-run/react";
+import { useLoaderData, Link } from "@remix-run/react";
 import { authenticate } from "../shopify.server";
 
 export async function loader({ request }) {

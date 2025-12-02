@@ -1,6 +1,6 @@
 // app/routes/app.additional.jsx
 import { json, redirect } from "@remix-run/node";
-import { useLoaderData, Form } from "@remix-run/react";
+import { useLoaderData, Form, Link } from "@remix-run/react";
 import { authenticate } from "../shopify.server";
 
 const PRICE_LABELS = {
