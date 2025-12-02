@@ -56,7 +56,7 @@ export async function action({ request }) {
   const res = await admin.graphql(`{ shop { currencyCode } }`);
   const jsonRes = await res.json();
   const currency = jsonRes?.data?.shop?.currencyCode === "INR" ? "INR" : "USD";
-  const planName = `${basePlan} ${currency}`;
+  const planName = currency === "INR" ? `${basePlan} INR` : basePlan;
 
   const { confirmationUrl } = await billing.request({
     plan: planName,
