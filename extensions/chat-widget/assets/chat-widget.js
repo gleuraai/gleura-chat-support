@@ -24,6 +24,7 @@ class SimpleAIChatWidget {
       primaryColor: dataEl.dataset.primaryColor || "#2563EB",
       returnMsg: dataEl.dataset.returnMsg || "",
       shipMsg: dataEl.dataset.shipMsg || "",
+      discountsMsg: dataEl.dataset.discountsMsg || "",
       supportPhone: dataEl.dataset.supportPhone || "",
       supportEmail: dataEl.dataset.supportEmail || "",
       supportHours: dataEl.dataset.supportHours || "",
@@ -164,7 +165,7 @@ class SimpleAIChatWidget {
       paddingBottom: this.isMobile() ? this.safe("8px") : "8px",
       borderTop: "1px solid #eef2f7", background: "#fff"
     });
-    footer.innerHTML = `Powered by <a href="https://gleura.ai" target="_blank" rel="noopener noreferrer" style="color:${this.settings.primaryColor};text-decoration:none;font-weight:600">Gleura AI</a>`;
+    footer.innerHTML = `Powered by Gleura Chat Support`;
 
     win.appendChild(header);
     win.appendChild(messages);
@@ -223,7 +224,10 @@ class SimpleAIChatWidget {
 
     make("Track Order", () => this.startTrack());
     make("Return / Exchange", () => this.showOwnerMsg(this.settings.returnMsg || "You can start a return or exchange by emailing support with your order number."));
-    make("Discounts", () => this.apiCall({ action: "discounts" }, "SAVE10 — 10% off<br>HOLIDAY20 — 20% off ₹4,000+<br>NEWBIE15 — 15% off"));
+    make("Discounts", () => {
+      const msg = this.settings.discountsMsg || "SAVE10 — 10% off<br>HOLIDAY20 — 20% off ₹4,000+<br>NEWBIE15 — 15% off";
+      this.showOwnerMsg(msg.replace(/\n/g, "<br>"));
+    });
     make("Shipping & Delivery", () => this.showOwnerMsg(this.settings.shipMsg || "Orders ship within 1–2 business days; standard delivery 3–5 business days."));
 
     make("Connect to Support", () => {
@@ -247,7 +251,12 @@ class SimpleAIChatWidget {
     this.addAssistantBubble(this.messagesEl(), html);
     this.addFollowUps([
       { label: "Track Order", onClick: () => this.startTrack() },
-      { label: "Discounts", onClick: () => this.apiCall({ action: "discounts" }, "…") },
+      {
+        label: "Discounts", onClick: () => {
+          const msg = this.settings.discountsMsg || "SAVE10 — 10% off<br>HOLIDAY20 — 20% off ₹4,000+<br>NEWBIE15 — 15% off";
+          this.showOwnerMsg(msg.replace(/\n/g, "<br>"));
+        }
+      },
       { label: "Shipping & Delivery", onClick: () => this.showOwnerMsg(this.settings.shipMsg || "…") },
       {
         label: "Connect to Support",

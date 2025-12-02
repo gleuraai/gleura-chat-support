@@ -24,16 +24,11 @@ export default function App() {
           A tagline about [your app] that describes your value proposition.
         </p>
         {showForm && (
-          <Form className={styles.form} method="post" action="/auth/login">
-            <label className={styles.label}>
-              <span>Shop domain</span>
-              <input className={styles.input} type="text" name="shop" />
-              <span>e.g: my-shop-domain.myshopify.com</span>
-            </label>
-            <button className={styles.button} type="submit">
-              Log in
-            </button>
-          </Form>
+          <div className={styles.form}>
+            <p className={styles.text}>
+              To use Gleura Chat Support, please install the app directly from the Shopify App Store.
+            </p>
+          </div>
         )}
         <ul className={styles.list}>
           <li>

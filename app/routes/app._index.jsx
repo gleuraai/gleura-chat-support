@@ -46,13 +46,13 @@ export default function AppIndex() {
           </span>
         </div>
         <p style={{ marginTop: 8, color: "#6B7280" }}>Prices shown in {currency}. Manage or upgrade your plan.</p>
-        <a href="/app/additional"
+        <Link to="/app/additional"
           style={{
             display: "inline-block", marginTop: 8, padding: "8px 12px",
             background: "#111827", color: "#fff", borderRadius: 6, textDecoration: "none"
           }}>
           Open Plans & Billing
-        </a>
+        </Link>
         {activePlan && (
           <div style={{ marginTop: 8, color: "#6B7280", fontSize: 13 }}>
             Current plan: <strong>{activePlan}</strong>

@@ -78,7 +78,7 @@ export default function AdditionalPage() {
 
   return (
     <div style={{ padding: 24, fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial" }}>
-      <a href="/app" style={{ textDecoration: "none" }}>← Back to Dashboard</a>
+      <Link to="/app" style={{ textDecoration: "none" }}>← Back to Dashboard</Link>
       <h1 style={{ marginTop: 8, fontSize: 24 }}>Plans &amp; Billing</h1>
 
       {installed && (

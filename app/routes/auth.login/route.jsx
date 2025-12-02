@@ -45,17 +45,15 @@ export default function Auth() {
               <Text variant="headingMd" as="h2">
                 Log in
               </Text>
-              <TextField
-                type="text"
-                name="shop"
-                label="Shop domain"
-                helpText="example.myshopify.com"
-                value={shop}
-                onChange={setShop}
-                autoComplete="on"
-                error={errors.shop}
-              />
-              <Button submit>Log in</Button>
+              {errors.shop ? (
+                <Text tone="critical">
+                  {errors.shop}
+                </Text>
+              ) : (
+                <Text>
+                  Please install this app from the Shopify App Store.
+                </Text>
+              )}
             </FormLayout>
           </Form>
         </Card>
