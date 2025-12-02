@@ -7,9 +7,6 @@ const PRICE_LABELS = {
   USD: {
     "Monthly Subscription": "$9.99 / month",
   },
-  INR: {
-    "Monthly Subscription": "₹999 / month",
-  },
 };
 
 const BASE_PLANS = [
@@ -25,21 +22,16 @@ export async function loader({ request }) {
   const installed = url.searchParams.get("installed") === "1";
 
   const { admin, billing } = await authenticate.admin(request);
+  const currency = "USD";
 
-  const res = await admin.graphql(`{ shop { currencyCode } }`);
-  const jsonRes = await res.json();
-  const currency = jsonRes?.data?.shop?.currencyCode === "INR" ? "INR" : "USD";
-
-  const planNames = [
-    "Monthly Subscription", "Monthly Subscription INR"
-  ];
+  const planNames = ["Monthly Subscription"];
   const status = await billing.check({ isTest: true, plans: planNames });
 
   let activePlan = null;
   const activeSub = status?.subscriptions?.find((s) =>
     ["ACTIVE", "PENDING"].includes(s.status)
   );
-  if (activeSub?.name) activePlan = activeSub.name.replace(" INR", "");
+  if (activeSub?.name) activePlan = activeSub.name;
 
   return json({ currency, activePlan, installed });
 }
@@ -47,16 +39,13 @@ export async function loader({ request }) {
 export async function action({ request }) {
   const form = await request.formData();
   const basePlan = String(form.get("plan") || "");
-  const { admin, billing } = await authenticate.admin(request);
+  const { billing } = await authenticate.admin(request);
 
   if (basePlan === "Free Trial") {
     return redirect("/app?trial=started");
   }
 
-  const res = await admin.graphql(`{ shop { currencyCode } }`);
-  const jsonRes = await res.json();
-  const currency = jsonRes?.data?.shop?.currencyCode === "INR" ? "INR" : "USD";
-  const planName = currency === "INR" ? `${basePlan} INR` : basePlan;
+  const planName = "Monthly Subscription";
 
   const { confirmationUrl } = await billing.request({
     plan: planName,
