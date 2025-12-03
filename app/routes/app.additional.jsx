@@ -45,18 +45,13 @@ export async function action({ request }) {
     return redirect("/app?trial=started");
   }
 
-  const appUrl = process.env.SHOPIFY_APP_URL;
-  if (!appUrl) {
-    return json({ error: "SHOPIFY_APP_URL environment variable is not set. Please contact support." }, { status: 500 });
-  }
-
   const planName = "Monthly Subscription";
 
   try {
     const { confirmationUrl } = await billing.request({
       plan: planName,
       isTest: true,
-      returnUrl: `${appUrl}/app/additional?installed=1`,
+      returnUrl: "/app/additional?installed=1",
     });
     return redirect(confirmationUrl);
   } catch (error) {
