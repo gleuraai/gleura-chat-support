@@ -5,23 +5,17 @@ import { authenticate } from "../shopify.server";
 
 export async function loader({ request }) {
   const { admin, billing } = await authenticate.admin(request);
+  const currency = "USD";
 
-  // Currency
-  const res = await admin.graphql(`{ shop { currencyCode } }`);
-  const data = await res.json();
-  const currency = data?.data?.shop?.currencyCode === "INR" ? "INR" : "USD";
-
-  // Active subscription across USD/INR variants
-  const plans = [
-    "Monthly Subscription", "Monthly Subscription INR"
-  ];
+  // Active subscription
+  const plans = ["Monthly Subscription"];
   const status = await billing.check({ isTest: true, plans });
 
   let activePlan = null;
   const activeSub = status?.subscriptions?.find(s =>
     ["ACTIVE", "PENDING"].includes(s.status)
   );
-  if (activeSub?.name) activePlan = activeSub.name.replace(" INR", "");
+  if (activeSub?.name) activePlan = activeSub.name;
 
   return json({ currency, activePlan });
 }
