@@ -1,6 +1,6 @@
 // app/routes/app.additional.jsx
 import { json, redirect } from "@remix-run/node";
-import { useLoaderData, Form, Link } from "@remix-run/react";
+import { useLoaderData, Form, Link, useActionData } from "@remix-run/react";
 import { authenticate } from "../shopify.server";
 
 const PRICE_LABELS = {
@@ -47,7 +47,7 @@ export async function action({ request }) {
 
   const appUrl = process.env.SHOPIFY_APP_URL;
   if (!appUrl) {
-    throw new Error("SHOPIFY_APP_URL environment variable is not set.");
+    return json({ error: "SHOPIFY_APP_URL environment variable is not set. Please contact support." }, { status: 500 });
   }
 
   const planName = "Monthly Subscription";
@@ -55,18 +55,19 @@ export async function action({ request }) {
   try {
     const { confirmationUrl } = await billing.request({
       plan: planName,
-      isTest: true, // set to false in production
+      isTest: true,
       returnUrl: `${appUrl}/app/additional?installed=1`,
     });
     return redirect(confirmationUrl);
   } catch (error) {
     console.error("Billing request failed:", error);
-    throw error;
+    return json({ error: `Failed to create subscription: ${error.message}` }, { status: 500 });
   }
 }
 
 export default function AdditionalPage() {
   const { currency, activePlan, installed } = useLoaderData();
+  const actionData = useActionData();
   const price = PRICE_LABELS[currency] || PRICE_LABELS.USD;
 
   // Hide Free Trial if already subscribed to any plan
@@ -78,6 +79,15 @@ export default function AdditionalPage() {
     <div style={{ padding: 24, fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial" }}>
       <Link to="/app" style={{ textDecoration: "none" }}>← Back to Dashboard</Link>
       <h1 style={{ marginTop: 8, fontSize: 24 }}>Plans &amp; Billing</h1>
+
+      {actionData?.error && (
+        <div style={{
+          marginTop: 12, padding: 12, borderRadius: 8,
+          background: "#FEE", color: "#C00", border: "1px solid #FCC"
+        }}>
+          <strong>Error:</strong> {actionData.error}
+        </div>
+      )}
 
       {installed && (
         <div style={{
