@@ -45,18 +45,25 @@ export async function action({ request }) {
     return redirect("/app?trial=started");
   }
 
+  let appUrl = process.env.SHOPIFY_APP_URL;
+  if (!appUrl) {
+    return json({ error: "SHOPIFY_APP_URL environment variable is not set. Please contact support." }, { status: 500 });
+  }
+  appUrl = appUrl.trim().replace(/\/$/, ""); // Remove trailing slash
+
   const planName = "Monthly Subscription";
+  const returnUrl = `${appUrl}/app/additional?installed=1`;
 
   try {
     const { confirmationUrl } = await billing.request({
       plan: planName,
       isTest: true,
-      returnUrl: "/app/additional?installed=1",
+      returnUrl: returnUrl,
     });
     return redirect(confirmationUrl);
   } catch (error) {
     console.error("Billing request failed:", error);
-    return json({ error: `Failed to create subscription: ${error.message}` }, { status: 500 });
+    return json({ error: `Failed to create subscription: ${error.message}. URL: ${returnUrl}` }, { status: 500 });
   }
 }
 
