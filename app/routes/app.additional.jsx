@@ -51,19 +51,57 @@ export async function action({ request }) {
   }
   appUrl = appUrl.trim().replace(/\/$/, ""); // Remove trailing slash
 
+  const { admin } = await authenticate.admin(request);
   const planName = "Monthly Subscription";
   const returnUrl = `${appUrl}/app/additional?installed=1`;
 
   try {
-    const { confirmationUrl } = await billing.request({
-      plan: planName,
-      isTest: true,
-      returnUrl: returnUrl,
-    });
-    return redirect(confirmationUrl);
+    const response = await admin.graphql(
+      `#graphql
+      mutation AppSubscriptionCreate($name: String!, $lineItems: [AppSubscriptionLineItemInput!]!, $returnUrl: URL!, $test: Boolean) {
+        appSubscriptionCreate(name: $name, returnUrl: $returnUrl, lineItems: $lineItems, test: $test) {
+          userErrors {
+            field
+            message
+          }
+          confirmationUrl
+          appSubscription {
+            id
+          }
+        }
+      }`,
+      {
+        variables: {
+          name: planName,
+          returnUrl: returnUrl,
+          test: true,
+          lineItems: [
+            {
+              plan: {
+                appRecurringPricingDetails: {
+                  price: { amount: 9.99, currencyCode: "USD" },
+                  interval: "EVERY_30_DAYS",
+                },
+              },
+            },
+          ],
+        },
+      }
+    );
+
+    const responseJson = await response.json();
+    const { data: { appSubscriptionCreate } } = responseJson;
+
+    if (appSubscriptionCreate.userErrors.length > 0) {
+      const errors = appSubscriptionCreate.userErrors.map(e => e.message).join(", ");
+      console.error("Billing userErrors:", errors);
+      return json({ error: `Shopify Error: ${errors}` }, { status: 400 });
+    }
+
+    return redirect(appSubscriptionCreate.confirmationUrl);
   } catch (error) {
     console.error("Billing request failed:", error);
-    return json({ error: `Failed to create subscription: ${error.message}. URL: ${returnUrl}` }, { status: 500 });
+    return json({ error: `Failed to create subscription: ${error.message}` }, { status: 500 });
   }
 }
 
