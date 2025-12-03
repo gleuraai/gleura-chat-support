@@ -45,15 +45,24 @@ export async function action({ request }) {
     return redirect("/app?trial=started");
   }
 
+  const appUrl = process.env.SHOPIFY_APP_URL;
+  if (!appUrl) {
+    throw new Error("SHOPIFY_APP_URL environment variable is not set.");
+  }
+
   const planName = "Monthly Subscription";
 
-  const { confirmationUrl } = await billing.request({
-    plan: planName,
-    isTest: true, // set to false in production
-    returnUrl: `${process.env.SHOPIFY_APP_URL}/app/additional?installed=1`,
-  });
-
-  return redirect(confirmationUrl);
+  try {
+    const { confirmationUrl } = await billing.request({
+      plan: planName,
+      isTest: true, // set to false in production
+      returnUrl: `${appUrl}/app/additional?installed=1`,
+    });
+    return redirect(confirmationUrl);
+  } catch (error) {
+    console.error("Billing request failed:", error);
+    throw error;
+  }
 }
 
 export default function AdditionalPage() {
