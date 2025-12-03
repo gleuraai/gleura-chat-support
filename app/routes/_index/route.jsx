@@ -19,9 +19,9 @@ export default function App() {
   return (
     <div className={styles.index}>
       <div className={styles.content}>
-        <h1 className={styles.heading}>A short heading about [your app]</h1>
+        <h1 className={styles.heading}>Gleura Chat Support</h1>
         <p className={styles.text}>
-          A tagline about [your app] that describes your value proposition.
+          AI-powered customer support for your Shopify store.
         </p>
         {showForm && (
           <div className={styles.form}>
@@ -32,16 +32,13 @@ export default function App() {
         )}
         <ul className={styles.list}>
           <li>
-            <strong>Product feature</strong>. Some detail about your feature and
-            its benefit to your customer.
+            <strong>AI Chatbot</strong>. Automatically answer customer queries 24/7.
           </li>
           <li>
-            <strong>Product feature</strong>. Some detail about your feature and
-            its benefit to your customer.
+            <strong>Order Tracking</strong>. Let customers track their orders instantly.
           </li>
           <li>
-            <strong>Product feature</strong>. Some detail about your feature and
-            its benefit to your customer.
+            <strong>Seamless Integration</strong>. Works perfectly with your Shopify theme.
           </li>
         </ul>
       </div>

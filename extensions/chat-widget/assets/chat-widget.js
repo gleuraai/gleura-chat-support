@@ -158,19 +158,9 @@ class SimpleAIChatWidget {
     inputWrap.appendChild(input); inputWrap.appendChild(sendFab);
     composer.appendChild(inputWrap);
 
-    const footer = document.createElement("div");
-    footer.id = "aiw-powered";
-    Object.assign(footer.style, {
-      fontSize: "12px", color: "#8e9bae", textAlign: "center", padding: "8px",
-      paddingBottom: this.isMobile() ? this.safe("8px") : "8px",
-      borderTop: "1px solid #eef2f7", background: "#fff"
-    });
-    footer.innerHTML = `Powered by Gleura Chat Support`;
-
     win.appendChild(header);
     win.appendChild(messages);
     win.appendChild(composer);
-    win.appendChild(footer);
 
     document.body.appendChild(launcher);
     document.body.appendChild(win);
