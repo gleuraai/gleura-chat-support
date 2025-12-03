@@ -12,8 +12,8 @@ const PRICE_LABELS = {
 const BASE_PLANS = [
   {
     key: "Monthly Subscription", chats: "Unlimited chats", bullets: [
-      "Unlimited chats / month", "Order tracking & FAQ bot", "Email support", "Priority support"
-    ], cta: "Subscribe"
+      "1-day free trial", "Unlimited chats / month", "Order tracking & FAQ bot", "Email support", "Priority support"
+    ], cta: "Start Free Trial"
   },
 ];
 

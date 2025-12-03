@@ -20,7 +20,7 @@ const shopify = shopifyApp({
 
   // ✅ Billing plans (charge in INR for Indian stores, USD otherwise)
   billing: {
-    "Monthly Subscription": { amount: 9.99, currencyCode: "USD", interval: "EVERY_30_DAYS" },
+    "Monthly Subscription": { amount: 9.99, currencyCode: "USD", interval: "EVERY_30_DAYS", trialDays: 1 },
   },
 
   future: {
