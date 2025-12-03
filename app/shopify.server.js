@@ -18,10 +18,8 @@ const shopify = shopifyApp({
   sessionStorage: new PrismaSessionStorage(prisma),
   distribution: AppDistribution.AppStore,
 
-  // ✅ Billing plans (charge in INR for Indian stores, USD otherwise)
-  billing: {
-    "Monthly Subscription": { amount: 9.99, currencyCode: "USD", interval: "EVERY_30_DAYS" },
-  },
+  // Billing is managed by Shopify App Store (Managed Pricing)
+  // No billing configuration needed here
 
   future: {
     unstable_newEmbeddedAuthStrategy: true,

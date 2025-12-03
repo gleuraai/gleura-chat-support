@@ -21,113 +21,19 @@ export async function loader({ request }) {
   const url = new URL(request.url);
   const installed = url.searchParams.get("installed") === "1";
 
-  const { admin, billing } = await authenticate.admin(request);
+  const { admin } = await authenticate.admin(request);
   const currency = "USD";
 
-  const planNames = ["Monthly Subscription"];
-  const status = await billing.check({ isTest: true, plans: planNames });
-
-  let activePlan = null;
-  const activeSub = status?.subscriptions?.find((s) =>
-    ["ACTIVE", "PENDING"].includes(s.status)
-  );
-  if (activeSub?.name) activePlan = activeSub.name;
-
-  return json({ currency, activePlan, installed });
-}
-
-export async function action({ request }) {
-  const form = await request.formData();
-  const basePlan = String(form.get("plan") || "");
-  const { billing } = await authenticate.admin(request);
-
-  if (basePlan === "Free Trial") {
-    return redirect("/app?trial=started");
-  }
-
-  let appUrl = process.env.SHOPIFY_APP_URL;
-  if (!appUrl) {
-    return json({ error: "SHOPIFY_APP_URL environment variable is not set. Please contact support." }, { status: 500 });
-  }
-  appUrl = appUrl.trim().replace(/\/$/, ""); // Remove trailing slash
-
-  const { admin } = await authenticate.admin(request);
-  const planName = "Monthly Subscription";
-  const returnUrl = `${appUrl}/app/additional?installed=1`;
-
-  try {
-    const response = await admin.graphql(
-      `#graphql
-      mutation AppSubscriptionCreate($name: String!, $lineItems: [AppSubscriptionLineItemInput!]!, $returnUrl: URL!, $test: Boolean) {
-        appSubscriptionCreate(name: $name, returnUrl: $returnUrl, lineItems: $lineItems, test: $test) {
-          userErrors {
-            field
-            message
-          }
-          confirmationUrl
-          appSubscription {
-            id
-          }
-        }
-      }`,
-      {
-        variables: {
-          name: planName,
-          returnUrl: returnUrl,
-          test: true,
-          lineItems: [
-            {
-              plan: {
-                appRecurringPricingDetails: {
-                  price: { amount: 9.99, currencyCode: "USD" },
-                  interval: "EVERY_30_DAYS",
-                },
-              },
-            },
-          ],
-        },
-      }
-    );
-
-    const responseJson = await response.json();
-    const { data: { appSubscriptionCreate } } = responseJson;
-
-    if (appSubscriptionCreate.userErrors.length > 0) {
-      const errors = appSubscriptionCreate.userErrors.map(e => e.message).join(", ");
-      console.error("Billing userErrors:", errors);
-      return json({ error: `Shopify Error: ${errors}` }, { status: 400 });
-    }
-
-    return redirect(appSubscriptionCreate.confirmationUrl);
-  } catch (error) {
-    console.error("Billing request failed:", error);
-    return json({ error: `Failed to create subscription: ${error.message}` }, { status: 500 });
-  }
+  return json({ currency, installed });
 }
 
 export default function AdditionalPage() {
-  const { currency, activePlan, installed } = useLoaderData();
-  const actionData = useActionData();
-  const price = PRICE_LABELS[currency] || PRICE_LABELS.USD;
-
-  // Hide Free Trial if already subscribed to any plan
-  const plansToShow = activePlan
-    ? BASE_PLANS.filter((p) => p.key !== "Free Trial")
-    : BASE_PLANS;
+  const { currency, installed } = useLoaderData();
 
   return (
     <div style={{ padding: 24, fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial" }}>
       <Link to="/app" style={{ textDecoration: "none" }}>← Back to Dashboard</Link>
-      <h1 style={{ marginTop: 8, fontSize: 24 }}>Plans &amp; Billing</h1>
-
-      {actionData?.error && (
-        <div style={{
-          marginTop: 12, padding: 12, borderRadius: 8,
-          background: "#FEE", color: "#C00", border: "1px solid #FCC"
-        }}>
-          <strong>Error:</strong> {actionData.error}
-        </div>
-      )}
+      <h1 style={{ marginTop: 8, fontSize: 24 }}>Plans & Billing</h1>
 
       {installed && (
         <div style={{
@@ -144,49 +50,39 @@ export default function AdditionalPage() {
         gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))",
         gap: 16
       }}>
-        {plansToShow.map((p) => {
-          const isActive = p.key === activePlan;
-          return (
-            <div key={p.key} style={{ border: "1px solid #E5E7EB", borderRadius: 10, background: "#fff" }}>
-              <div style={{ padding: 16, borderBottom: "1px solid #F3F4F6" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <h3 style={{ margin: 0, fontSize: 18 }}>{p.key}</h3>
-                  {isActive && (
-                    <span style={{ padding: "4px 8px", borderRadius: 999, background: "#E3FCEF", color: "#03543F", fontSize: 12 }}>
-                      Current Plan
-                    </span>
-                  )}
-                </div>
-                <div style={{ height: 8 }} />
-                <div style={{ fontSize: 24, fontWeight: 600 }}>{price[p.key]}</div>
-                <div style={{ color: "#6B7280" }}>{p.chats}</div>
-              </div>
+        <div style={{ border: "1px solid #E5E7EB", borderRadius: 10, background: "#fff" }}>
+          <div style={{ padding: 16, borderBottom: "1px solid #F3F4F6" }}>
+            <h3 style={{ margin: 0, fontSize: 18 }}>Monthly Subscription</h3>
+            <div style={{ height: 8 }} />
+            <div style={{ fontSize: 24, fontWeight: 600 }}>$9.99 / month</div>
+            <div style={{ color: "#6B7280" }}>Unlimited chats</div>
+          </div>
 
-              <div style={{ padding: 16 }}>
-                <ul style={{ margin: 0, paddingLeft: 18 }}>
-                  {p.bullets.map((b, i) => (<li key={i}>{b}</li>))}
-                </ul>
+          <div style={{ padding: 16 }}>
+            <ul style={{ margin: 0, paddingLeft: 18 }}>
+              <li>1-day free trial</li>
+              <li>Unlimited chats / month</li>
+              <li>Order tracking & FAQ bot</li>
+              <li>Email support</li>
+              <li>Priority support</li>
+            </ul>
 
-                <Form method="post">
-                  <input type="hidden" name="plan" value={p.key} />
-                  <button
-                    type="submit"
-                    disabled={isActive}
-                    style={{
-                      marginTop: 12, width: "100%", padding: "10px 12px",
-                      border: "none", borderRadius: 6,
-                      background: isActive ? "#E5E7EB" : "#111827",
-                      color: isActive ? "#374151" : "#fff",
-                      cursor: isActive ? "not-allowed" : "pointer", fontWeight: 600
-                    }}
-                  >
-                    {isActive ? "Current Plan" : p.cta}
-                  </button>
-                </Form>
-              </div>
+            <div style={{
+              marginTop: 12, padding: 12, background: "#F3F4F6", borderRadius: 6,
+              fontSize: 14, color: "#4B5563", textAlign: "center"
+            }}>
+              Billing is managed by Shopify App Store
             </div>
-          );
-        })}
+          </div>
+        </div>
+      </div>
+
+      <div style={{
+        marginTop: 24, padding: 16, background: "#FFF9E6", border: "1px solid #FFE4A3",
+        borderRadius: 8, fontSize: 14, color: "#92400E"
+      }}>
+        <strong>Note:</strong> This app uses Shopify-managed pricing. Billing is handled automatically through the Shopify App Store.
+        To configure pricing, go to your Shopify Partner Dashboard → Apps → Gleura Chat Support → Pricing.
       </div>
     </div>
   );
