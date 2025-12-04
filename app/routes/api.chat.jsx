@@ -54,15 +54,64 @@ export const action = async ({ request }) => {
       return json({ ok: true, pong: true, shop });
     }
 
+    // Helper to log usage
+    const logUsage = async (responsePayload) => {
+      if (shop && action !== "ping") {
+        try {
+          const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
+
+          // 1. Save Session
+          await prisma.chatSession.create({
+            data: {
+              shop,
+              action: action || "unknown",
+              payload: JSON.stringify(body),
+              response: JSON.stringify(responsePayload)
+            }
+          });
+
+          // 2. Update Usage
+          const usage = await prisma.chatUsage.findUnique({ where: { shop } });
+
+          if (usage && usage.month === currentMonth) {
+            await prisma.chatUsage.update({
+              where: { shop },
+              data: { count: { increment: 1 } }
+            });
+          } else {
+            // Reset or Create
+            await prisma.chatUsage.upsert({
+              where: { shop },
+              update: { count: 1, month: currentMonth },
+              create: { shop, count: 1, month: currentMonth }
+            });
+          }
+        } catch (err) {
+          console.error("Failed to log chat/usage:", err);
+        }
+      }
+    };
+
     if (action === "track_order") {
-      if (!shop) return json({ ok: false, error: "MISSING_SHOP", message: "We are unable to identify the store. Please try refreshing the page." });
-      if (!orderNumber || !phoneNumber)
-        return json({ ok: false, error: "MISSING_PARAMS", message: "Please provide both your order number and phone number." });
+      let finalPayload = {};
+
+      if (!shop) {
+        finalPayload = { ok: false, error: "MISSING_SHOP", message: "We are unable to identify the store. Please try refreshing the page." };
+        await logUsage(finalPayload);
+        return json(finalPayload);
+      }
+      if (!orderNumber || !phoneNumber) {
+        finalPayload = { ok: false, error: "MISSING_PARAMS", message: "Please provide both your order number and phone number." };
+        await logUsage(finalPayload);
+        return json(finalPayload);
+      }
 
       const adminToken = proxySession?.accessToken || process.env.SHOPIFY_ADMIN_TOKEN;
       const apiVersion = process.env.SHOPIFY_API_VERSION || "2025-01";
       if (!adminToken) {
-        return json({ ok: false, error: "MISSING_ADMIN_TOKEN", message: "Configuration error: Store access token is missing. Please contact support." });
+        finalPayload = { ok: false, error: "MISSING_ADMIN_TOKEN", message: "Configuration error: Store access token is missing. Please contact support." };
+        await logUsage(finalPayload);
+        return json(finalPayload);
       }
 
       // Shopify order "name" includes a leading # (e.g. #1001)
@@ -113,125 +162,94 @@ export const action = async ({ request }) => {
       }
 
       if (!ok) {
-        return json({ ok: false, error: "ADMIN_API_ERROR", status: status, message: "We encountered a temporary issue checking your order. Please try again later." });
-      }
+        finalPayload = { ok: false, error: "ADMIN_API_ERROR", status: status, message: "We encountered a temporary issue checking your order. Please try again later." };
+      } else {
+        const last10 = (s) => String(s || "").replace(/\D/g, "").slice(-10);
+        const phone10 = last10(phoneNumber);
 
-      const last10 = (s) => String(s || "").replace(/\D/g, "").slice(-10);
-      const phone10 = last10(phoneNumber);
-
-      // Match by shipping phone OR customer phone
-      const order = orders.find((o) => {
-        const s1 = last10(o?.shipping_address?.phone);
-        const s2 = last10(o?.customer?.phone);
-        return s1 === phone10 || s2 === phone10;
-      });
-
-      if (!order) {
-        // If we found orders but none matched the phone, give a hint
-        if (orders.length > 0) {
-          const foundPhones = orders.map(o => {
-            const p1 = last10(o.shipping_address?.phone);
-            const p2 = last10(o.customer?.phone);
-            return p1 || p2 ? `...${(p1 || p2).slice(-4)}` : "No Phone";
-          }).join(", ");
-
-          return json({
-            ok: false,
-            error: "PHONE_MISMATCH",
-            message: `Found order ${orders[0].name}, but the phone number didn't match. Registered phone ends in: ${foundPhones}.`
-          });
-        }
-
-        return json({
-          ok: false,
-          error: "NOT_FOUND",
-          message: "We couldn't find an order with those details. Please double-check your order number and the phone number used at checkout."
+        // Match by shipping phone OR customer phone
+        const order = orders.find((o) => {
+          const s1 = last10(o?.shipping_address?.phone);
+          const s2 = last10(o?.customer?.phone);
+          return s1 === phone10 || s2 === phone10;
         });
+
+        if (!order) {
+          // If we found orders but none matched the phone, give a hint
+          if (orders.length > 0) {
+            const foundPhones = orders.map(o => {
+              const p1 = last10(o.shipping_address?.phone);
+              const p2 = last10(o.customer?.phone);
+              return p1 || p2 ? `...${(p1 || p2).slice(-4)}` : "No Phone";
+            }).join(", ");
+
+            finalPayload = {
+              ok: false,
+              error: "PHONE_MISMATCH",
+              message: `Found order ${orders[0].name}, but the phone number didn't match. Registered phone ends in: ${foundPhones}.`
+            };
+          } else {
+            finalPayload = {
+              ok: false,
+              error: "NOT_FOUND",
+              message: "We couldn't find an order with those details. Please double-check your order number and the phone number used at checkout."
+            };
+          }
+        } else {
+          // Tracking (first fulfillment if present)
+          const f = (order.fulfillments || [])[0] || {};
+          const trackNum =
+            f.tracking_number || (Array.isArray(f.tracking_numbers) && f.tracking_numbers[0]) || "";
+          const trackUrl =
+            f.tracking_url || (Array.isArray(f.tracking_urls) && f.tracking_urls[0]) || "";
+
+          finalPayload = {
+            order: {
+              name: order.name,
+              date: order.created_at,
+              value: order.total_price,
+              currency: order.currency,
+              status:
+                order.fulfillment_status ||
+                order.financial_status ||
+                "—",
+              city: order.shipping_address?.city || "",
+              zip: order.shipping_address?.zip || "",
+              tracking: trackNum
+                ? { number: String(trackNum), url: trackUrl || null }
+                : null,
+            },
+          };
+        }
       }
 
-      // Tracking (first fulfillment if present)
-      const f = (order.fulfillments || [])[0] || {};
-      const trackNum =
-        f.tracking_number || (Array.isArray(f.tracking_numbers) && f.tracking_numbers[0]) || "";
-      const trackUrl =
-        f.tracking_url || (Array.isArray(f.tracking_urls) && f.tracking_urls[0]) || "";
-
-      const payload = {
-        order: {
-          name: order.name,
-          date: order.created_at,
-          value: order.total_price,
-          currency: order.currency,
-          status:
-            order.fulfillment_status ||
-            order.financial_status ||
-            "—",
-          city: order.shipping_address?.city || "",
-          zip: order.shipping_address?.zip || "",
-          tracking: trackNum
-            ? { number: String(trackNum), url: trackUrl || null }
-            : null,
-        },
-      };
-
-      return json(payload);
+      await logUsage(finalPayload);
+      return json(finalPayload);
     }
 
     // Handle discounts action
     if (action === "discounts") {
-      return json({
+      const payload = {
         ok: true,
         response: "<b>Current Offers:</b><br>• SAVE10 — 10% off<br>• HOLIDAY20 — 20% off orders over ₹4,000<br>• NEWBIE15 — 15% off for new customers"
-      });
+      };
+      await logUsage(payload);
+      return json(payload);
     }
 
     // Handle generic messages (missing action)
     if (!action && body?.message) {
-      return json({
+      const payload = {
         ok: true,
         response: "I can help with Track Order, Return/Exchange, Discounts, Shipping & Delivery, or Connect to Support."
-      });
+      };
+      await logUsage(payload);
+      return json(payload);
     }
 
     // Unknown action
     const responsePayload = { ok: false, error: "UNKNOWN_ACTION", message: "I didn't understand that action. Please try using the menu buttons." };
-
-    // LOGGING & USAGE TRACKING
-    if (shop && action !== "ping") {
-      try {
-        const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
-
-        // 1. Save Session
-        await prisma.chatSession.create({
-          data: {
-            shop,
-            action: action || "unknown",
-            payload: JSON.stringify(body),
-            response: JSON.stringify(responsePayload)
-          }
-        });
-
-        // 2. Update Usage
-        const usage = await prisma.chatUsage.findUnique({ where: { shop } });
-
-        if (usage && usage.month === currentMonth) {
-          await prisma.chatUsage.update({
-            where: { shop },
-            data: { count: { increment: 1 } }
-          });
-        } else {
-          // Reset or Create
-          await prisma.chatUsage.upsert({
-            where: { shop },
-            update: { count: 1, month: currentMonth },
-            create: { shop, count: 1, month: currentMonth }
-          });
-        }
-      } catch (err) {
-        console.error("Failed to log chat/usage:", err);
-      }
-    }
-
+    await logUsage(responsePayload);
     return json(responsePayload);
 
   } catch (e) {
