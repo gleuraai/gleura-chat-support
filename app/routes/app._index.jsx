@@ -4,45 +4,75 @@ import { useLoaderData, Link } from "@remix-run/react";
 import prisma from "../db.server";
 
 export async function loader({ request }) {
-  const { admin, billing, session } = await authenticate.admin(request);
-  const currency = "USD";
-  const shop = session.shop;
-
-  // Active subscription
-  const plans = ["Basic Plan", "Pro", "Enterprise"];
-  const status = await billing.check({ isTest: true, plans });
-
-  let activePlan = null;
-  const activeSub = status?.appSubscriptions?.find(s => s.status === "ACTIVE");
-  if (activeSub) activePlan = activeSub.name;
-
-  // Fetch Usage & Recent Chats
-  let usageCount = 0;
-  let recentChats = [];
-
   try {
-    const usageRecord = await prisma.chatUsage.findUnique({ where: { shop } });
-    usageCount = usageRecord?.count || 0;
+    const { admin, billing, session } = await authenticate.admin(request);
+    const currency = "USD";
+    const shop = session.shop;
 
-    recentChats = await prisma.chatSession.findMany({
-      where: { shop },
-      orderBy: { createdAt: "desc" },
-      take: 5
+    // Active subscription
+    const plans = ["Basic Plan", "Pro", "Enterprise"];
+    let activePlan = null;
+    try {
+      const status = await billing.check({ isTest: true, plans });
+      const activeSub = status?.appSubscriptions?.find(s => s.status === "ACTIVE");
+      if (activeSub) activePlan = activeSub.name;
+    } catch (e) {
+      console.error("Billing check failed:", e);
+    }
+
+    // Fetch Usage & Recent Chats
+    let usageCount = 0;
+    let recentChats = [];
+
+    try {
+      const usageRecord = await prisma.chatUsage.findUnique({ where: { shop } });
+      usageCount = usageRecord?.count || 0;
+
+      recentChats = await prisma.chatSession.findMany({
+        where: { shop },
+        orderBy: { createdAt: "desc" },
+        take: 5
+      });
+    } catch (error) {
+      console.error("Dashboard Loader Error (Prisma):", error);
+    }
+
+    return json({ currency, activePlan, usageCount, recentChats });
+
+  } catch (fatalError) {
+    // Important: Re-throw redirects (Response objects) so auth works
+    if (fatalError instanceof Response) {
+      throw fatalError;
+    }
+
+    console.error("Fatal Dashboard Error:", fatalError);
+    return json({
+      currency: "USD",
+      activePlan: null,
+      usageCount: 0,
+      recentChats: [],
+      error: fatalError.message || "Unknown error"
     });
-  } catch (error) {
-    console.error("Dashboard Loader Error (Prisma):", error);
-    // Fallback to defaults so the page doesn't crash
   }
-
-  return json({ currency, activePlan, usageCount, recentChats });
 }
 
 export default function AppIndex() {
-  const { currency, activePlan, usageCount, recentChats } = useLoaderData();
+  const { currency, activePlan, usageCount, recentChats, error } = useLoaderData();
 
   return (
     <div style={{ padding: 24, fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial" }}>
       <h1 style={{ margin: 0, fontSize: 24 }}>Chat Support Dashboard</h1>
+
+      {error && (
+        <div style={{
+          marginTop: 16, padding: 12, borderRadius: 8,
+          background: "#FEF2F2", color: "#991B1B", border: "1px solid #FCA5A5"
+        }}>
+          <strong>Dashboard Error:</strong> {error}
+          <br />
+          <small>Please refresh or contact support if this persists.</small>
+        </div>
+      )}
 
       {/* Plans & Billing */}
       <div style={{ marginTop: 24, padding: 16, border: "1px solid #E5E7EB", borderRadius: 10, background: "#fff" }}>
