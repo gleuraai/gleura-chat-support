@@ -101,8 +101,15 @@ export async function action({ request }) {
       isTest: true,
       returnUrl: returnUrl,
     });
+    // This line might be unreachable if billing.request throws a redirect, 
+    // but if it returns a URL, we use it.
     return redirect(confirmationUrl);
   } catch (error) {
+    // If the error is a Response (redirect), re-throw it so Remix handles it
+    if (error instanceof Response) {
+      throw error;
+    }
+
     console.error("Billing request failed:", error);
     // Serialize the error to see the full details in the UI
     const errorMessage = error instanceof Error ? error.message : JSON.stringify(error);
