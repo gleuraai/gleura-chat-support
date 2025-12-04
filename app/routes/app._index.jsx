@@ -1,6 +1,7 @@
 // app/routes/app._index.jsx
 import { json } from "@remix-run/node";
 import { useLoaderData, Link } from "@remix-run/react";
+import { authenticate } from "../shopify.server";
 import prisma from "../db.server";
 
 export async function loader({ request }) {
