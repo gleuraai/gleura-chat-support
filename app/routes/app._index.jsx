@@ -116,17 +116,40 @@ export default function AppIndex() {
             </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {recentChats.map(chat => (
-                <div key={chat.id} style={{ padding: 12, border: "1px solid #E5E7EB", borderRadius: 6 }}>
-                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#6B7280" }}>
-                    <span>{new Date(chat.createdAt).toLocaleString()}</span>
-                    <span>{chat.action}</span>
+              {recentChats.map(chat => {
+                let details = "—";
+                try {
+                  const p = JSON.parse(chat.payload);
+                  if (chat.action === "track_order") {
+                    details = `Track Order ${p.orderNumber || ""} (Phone: ${p.phoneNumber || "—"})`;
+                  } else if (chat.action === "discounts") {
+                    details = "Requested discount codes";
+                  } else if (p.message) {
+                    details = `Message: "${p.message}"`;
+                  } else {
+                    details = JSON.stringify(p);
+                  }
+                } catch (e) {
+                  details = chat.payload;
+                }
+
+                return (
+                  <div key={chat.id} style={{ padding: 12, border: "1px solid #E5E7EB", borderRadius: 6 }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#6B7280" }}>
+                      <span>{new Date(chat.createdAt).toLocaleString()}</span>
+                      <span style={{
+                        textTransform: "uppercase", fontSize: 10, fontWeight: 700,
+                        padding: "2px 6px", borderRadius: 4, background: "#F3F4F6", color: "#374151"
+                      }}>
+                        {chat.action?.replace("_", " ") || "UNKNOWN"}
+                      </span>
+                    </div>
+                    <div style={{ marginTop: 4, fontSize: 14, color: "#111827", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                      {details}
+                    </div>
                   </div>
-                  <div style={{ marginTop: 4, fontSize: 14, color: "#111827", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                    {chat.payload}
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
