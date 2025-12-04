@@ -1,27 +1,37 @@
 // app/routes/app._index.jsx
 import { json } from "@remix-run/node";
 import { useLoaderData, Link } from "@remix-run/react";
-import { authenticate } from "../shopify.server";
+import prisma from "../db.server";
 
 export async function loader({ request }) {
-  const { admin, billing } = await authenticate.admin(request);
+  const { admin, billing, session } = await authenticate.admin(request);
   const currency = "USD";
+  const shop = session.shop;
 
   // Active subscription
-  const plans = ["Monthly Subscription"];
+  const plans = ["Basic Plan", "Pro", "Enterprise"];
   const status = await billing.check({ isTest: true, plans });
 
   let activePlan = null;
-  const activeSub = status?.subscriptions?.find(s =>
-    ["ACTIVE", "PENDING"].includes(s.status)
-  );
-  if (activeSub?.name) activePlan = activeSub.name;
+  const activeSub = status?.appSubscriptions?.find(s => s.status === "ACTIVE");
+  if (activeSub) activePlan = activeSub.name;
 
-  return json({ currency, activePlan });
+  // Fetch Usage
+  const usageRecord = await prisma.chatUsage.findUnique({ where: { shop } });
+  const usageCount = usageRecord?.count || 0;
+
+  // Fetch Recent Chats
+  const recentChats = await prisma.chatSession.findMany({
+    where: { shop },
+    orderBy: { createdAt: "desc" },
+    take: 5
+  });
+
+  return json({ currency, activePlan, usageCount, recentChats });
 }
 
 export default function AppIndex() {
-  const { currency, activePlan } = useLoaderData();
+  const { currency, activePlan, usageCount, recentChats } = useLoaderData();
 
   return (
     <div style={{ padding: 24, fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial" }}>
@@ -40,29 +50,47 @@ export default function AppIndex() {
           </span>
         </div>
         <p style={{ marginTop: 8, color: "#6B7280" }}>Prices shown in {currency}. Manage or upgrade your plan.</p>
+
+        {activePlan && (
+          <div style={{ marginTop: 12, padding: 12, background: "#F9FAFB", borderRadius: 6 }}>
+            <div style={{ fontSize: 14, fontWeight: 600, color: "#374151" }}>Current Usage</div>
+            <div style={{ fontSize: 24, fontWeight: 700, color: "#111827" }}>{usageCount} chats</div>
+            <div style={{ fontSize: 12, color: "#6B7280" }}>Resets monthly</div>
+          </div>
+        )}
+
         <Link to="/app/additional"
           style={{
-            display: "inline-block", marginTop: 8, padding: "8px 12px",
+            display: "inline-block", marginTop: 12, padding: "8px 12px",
             background: "#111827", color: "#fff", borderRadius: 6, textDecoration: "none"
           }}>
           Open Plans & Billing
         </Link>
-        {activePlan && (
-          <div style={{ marginTop: 8, color: "#6B7280", fontSize: 13 }}>
-            Current plan: <strong>{activePlan}</strong>
-          </div>
-        )}
       </div>
 
-      {/* Your existing block */}
+      {/* Recent Conversations */}
       <div style={{ marginTop: 24, padding: 16, border: "1px solid #E5E7EB", borderRadius: 10, background: "#fff" }}>
-        <h2 style={{ marginTop: 0, fontSize: 18 }}>Chat Support Management</h2>
-        <p>Manage customer support conversations powered by AI</p>
-        <div style={{ marginTop: 12, padding: 12, background: "#F8FAFC", border: "1px dashed #CBD5E1", borderRadius: 6 }}>
-          <strong>Recent Conversations</strong>
-          <p style={{ margin: 0, color: "#6B7280" }}>
-            No conversations yet. Your chat support widget will appear on your storefront.
-          </p>
+        <h2 style={{ marginTop: 0, fontSize: 18 }}>Recent Conversations</h2>
+        <div style={{ marginTop: 12 }}>
+          {recentChats.length === 0 ? (
+            <div style={{ padding: 12, background: "#F8FAFC", border: "1px dashed #CBD5E1", borderRadius: 6, color: "#6B7280" }}>
+              No conversations yet. Your chat support widget will appear on your storefront.
+            </div>
+          ) : (
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {recentChats.map(chat => (
+                <div key={chat.id} style={{ padding: 12, border: "1px solid #E5E7EB", borderRadius: 6 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#6B7280" }}>
+                    <span>{new Date(chat.createdAt).toLocaleString()}</span>
+                    <span>{chat.action}</span>
+                  </div>
+                  <div style={{ marginTop: 4, fontSize: 14, color: "#111827", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    {chat.payload}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

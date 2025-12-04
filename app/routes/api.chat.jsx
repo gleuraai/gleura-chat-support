@@ -1,5 +1,6 @@
 import { json } from "@remix-run/node";
 import { authenticate } from "../shopify.server";
+import prisma from "../db.server";
 
 /**
  * ALWAYS reply JSON (even on errors) so the widget never tries to parse HTML.
@@ -193,7 +194,46 @@ export const action = async ({ request }) => {
     }
 
     // Unknown action
-    return json({ ok: false, error: "UNKNOWN_ACTION", message: "I didn't understand that action. Please try using the menu buttons." });
+    const responsePayload = { ok: false, error: "UNKNOWN_ACTION", message: "I didn't understand that action. Please try using the menu buttons." };
+
+    // LOGGING & USAGE TRACKING
+    if (shop && action !== "ping") {
+      try {
+        const currentMonth = new Date().toISOString().slice(0, 7); // YYYY-MM
+
+        // 1. Save Session
+        await prisma.chatSession.create({
+          data: {
+            shop,
+            action: action || "unknown",
+            payload: JSON.stringify(body),
+            response: JSON.stringify(responsePayload)
+          }
+        });
+
+        // 2. Update Usage
+        const usage = await prisma.chatUsage.findUnique({ where: { shop } });
+
+        if (usage && usage.month === currentMonth) {
+          await prisma.chatUsage.update({
+            where: { shop },
+            data: { count: { increment: 1 } }
+          });
+        } else {
+          // Reset or Create
+          await prisma.chatUsage.upsert({
+            where: { shop },
+            update: { count: 1, month: currentMonth },
+            create: { shop, count: 1, month: currentMonth }
+          });
+        }
+      } catch (err) {
+        console.error("Failed to log chat/usage:", err);
+      }
+    }
+
+    return json(responsePayload);
+
   } catch (e) {
     console.error("api.chat error", e);
     // Always JSON — never HTML

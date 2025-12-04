@@ -25,7 +25,8 @@ const PLANS = [
     features: [
       "1-day free trial",
       "Up to 1,000 chats / month",
-      "Order tracking & FAQ bot",
+      "Effective cost: ≈ $0.01 per chat",
+      "Order tracking by order number / mobile",
       "Email support"
     ],
     cta: "Start Free Trial"
@@ -36,9 +37,10 @@ const PLANS = [
     chats: "Up to 2,500 chats / month",
     features: [
       "Up to 2,500 chats / month",
-      "Order tracking & FAQ bot",
-      "Priority Email support",
-      "Removed Branding"
+      "Effective cost: ≈ $0.008 per chat",
+      "Order tracking by order number / mobile",
+      "“Powered by” branding removed",
+      "Priority Email support"
     ],
     cta: "Upgrade to Pro"
   },
@@ -48,7 +50,9 @@ const PLANS = [
     chats: "Up to 5,000 chats / month",
     features: [
       "Up to 5,000 chats / month",
-      "Order tracking & FAQ bot",
+      "Effective cost: ≈ $0.01 per chat",
+      "Order tracking by order number / mobile",
+      "“Powered by” branding removed",
       "Dedicated Support",
       "Custom Features"
     ],
@@ -61,19 +65,26 @@ export async function loader({ request }) {
   const url = new URL(request.url);
   const installed = url.searchParams.get("installed") === "1";
 
-  const billingCheck = await billing.check({
-    isTest: true,
-    plans: ["Basic Plan", "Pro", "Enterprise"],
-    returnObject: true,
-  });
+  try {
+    const billingCheck = await billing.check({
+      isTest: true,
+      plans: ["Basic Plan", "Pro", "Enterprise"],
+      returnObject: true,
+    });
 
-  let activePlan = null;
-  const activeSub = billingCheck?.appSubscriptions?.find(s => s.status === "ACTIVE");
-  if (activeSub) {
-    activePlan = activeSub.name;
+    console.log("DEBUG: Billing Check Response:", JSON.stringify(billingCheck, null, 2));
+
+    let activePlan = null;
+    const activeSub = billingCheck?.appSubscriptions?.find(s => s.status === "ACTIVE");
+    if (activeSub) {
+      activePlan = activeSub.name;
+    }
+
+    return json({ activePlan, installed });
+  } catch (error) {
+    console.error("DEBUG: Billing Check Failed:", error);
+    return json({ activePlan: null, installed, error: error.message });
   }
-
-  return json({ activePlan, installed });
 }
 
 export async function action({ request }) {

@@ -30,3 +30,20 @@ model Session {
   collaborator  Boolean?  @default(false)
   emailVerified Boolean?  @default(false)
 }
+
+model ChatSession {
+  id        String   @id @default(uuid())
+  shop      String
+  action    String
+  payload   String
+  response  String
+  createdAt DateTime @default(now())
+}
+
+model ChatUsage {
+  id        String   @id @default(uuid())
+  shop      String   @unique
+  count     Int      @default(0)
+  month     String
+  updatedAt DateTime @updatedAt
+}
