@@ -104,7 +104,9 @@ export async function action({ request }) {
     return redirect(confirmationUrl);
   } catch (error) {
     console.error("Billing request failed:", error);
-    return json({ error: `Billing failed: ${error.message}` }, { status: 500 });
+    // Serialize the error to see the full details in the UI
+    const errorMessage = error instanceof Error ? error.message : JSON.stringify(error);
+    return json({ error: `Billing failed: ${errorMessage}` }, { status: 500 });
   }
 }
 
