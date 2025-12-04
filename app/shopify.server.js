@@ -18,8 +18,25 @@ const shopify = shopifyApp({
   sessionStorage: new PrismaSessionStorage(prisma),
   distribution: AppDistribution.AppStore,
 
-  // Billing is managed by Shopify App Store (Managed Pricing)
-  // No billing configuration needed here
+  // Billing configuration (Manual Pricing)
+  billing: {
+    "Basic Plan": {
+      amount: 9.99,
+      currencyCode: "USD",
+      interval: "EVERY_30_DAYS",
+      trialDays: 1,
+    },
+    "Pro": {
+      amount: 19.99,
+      currencyCode: "USD",
+      interval: "EVERY_30_DAYS",
+    },
+    "Enterprise": {
+      amount: 49.99,
+      currencyCode: "USD",
+      interval: "EVERY_30_DAYS",
+    },
+  },
 
   future: {
     unstable_newEmbeddedAuthStrategy: true,
