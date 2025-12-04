@@ -77,13 +77,6 @@ export default function AdditionalPage() {
         </div>
       </div>
 
-      <div style={{
-        marginTop: 24, padding: 16, background: "#FFF9E6", border: "1px solid #FFE4A3",
-        borderRadius: 8, fontSize: 14, color: "#92400E"
-      }}>
-        <strong>Note:</strong> This app uses Shopify-managed pricing. Billing is handled automatically through the Shopify App Store.
-        To configure pricing, go to your Shopify Partner Dashboard → Apps → Gleura Chat Support → Pricing.
-      </div>
     </div>
   );
 }
