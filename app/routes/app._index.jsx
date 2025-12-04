@@ -16,16 +16,23 @@ export async function loader({ request }) {
   const activeSub = status?.appSubscriptions?.find(s => s.status === "ACTIVE");
   if (activeSub) activePlan = activeSub.name;
 
-  // Fetch Usage
-  const usageRecord = await prisma.chatUsage.findUnique({ where: { shop } });
-  const usageCount = usageRecord?.count || 0;
+  // Fetch Usage & Recent Chats
+  let usageCount = 0;
+  let recentChats = [];
 
-  // Fetch Recent Chats
-  const recentChats = await prisma.chatSession.findMany({
-    where: { shop },
-    orderBy: { createdAt: "desc" },
-    take: 5
-  });
+  try {
+    const usageRecord = await prisma.chatUsage.findUnique({ where: { shop } });
+    usageCount = usageRecord?.count || 0;
+
+    recentChats = await prisma.chatSession.findMany({
+      where: { shop },
+      orderBy: { createdAt: "desc" },
+      take: 5
+    });
+  } catch (error) {
+    console.error("Dashboard Loader Error (Prisma):", error);
+    // Fallback to defaults so the page doesn't crash
+  }
 
   return json({ currency, activePlan, usageCount, recentChats });
 }
