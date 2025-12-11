@@ -36,7 +36,8 @@ use_legacy_install_flow = false
 redirect_urls = [
   "https://j2paxwkmmd.eu-central-1.awsapprunner.com/auth/callback",
   "https://j2paxwkmmd.eu-central-1.awsapprunner.com/auth/shopify/callback",
-  "https://j2paxwkmmd.eu-central-1.awsapprunner.com/app/additional"
+  "https://j2paxwkmmd.eu-central-1.awsapprunner.com/app/additional",
+  "https://j2paxwkmmd.eu-central-1.awsapprunner.com/app/pricing"
 ]
 
 [app_proxy]

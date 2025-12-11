@@ -96,15 +96,15 @@ export async function action({ request }) {
     return json({ error: "No plan selected" }, { status: 400 });
   }
 
-  let appUrl = process.env.SHOPIFY_APP_URL;
-  if (appUrl) {
-    appUrl = appUrl.trim().replace(/\/$/, "");
-  } else {
-    // Fallback if env var is missing (shouldn't happen in prod)
-    appUrl = "https://j2paxwkmmd.eu-central-1.awsapprunner.com";
-  }
+  // Ensure appUrl is correctly formatted
+  let appUrl = (process.env.SHOPIFY_APP_URL || "https://j2paxwkmmd.eu-central-1.awsapprunner.com").replace(/\/$/, "");
 
+  // Use the correct return URL based on where the user initiated the action
+  // If we are on app/additional, return there. If on app/pricing, return there.
+  // For now, we default to app/additional as that's this file's route.
   const returnUrl = `${appUrl}/app/additional?installed=1`;
+
+  console.log(`DEBUG: Requesting billing for plan: ${plan}, returnUrl: ${returnUrl}`);
 
   try {
     const { confirmationUrl } = await billing.request({
