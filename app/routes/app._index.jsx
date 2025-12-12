@@ -75,22 +75,6 @@ export default function AppIndex() {
         </div>
       )}
 
-      {/* Setup Instructions (Onboarding) */}
-      <div style={{ marginTop: 24, padding: 16, border: "1px solid #E5E7EB", borderRadius: 10, background: "#fff" }}>
-        <h2 style={{ margin: 0, fontSize: 18 }}>Setup Instructions</h2>
-        <p style={{ marginTop: 8, color: "#6B7280" }}>Follow these steps to enable the chat widget on your store.</p>
-
-        <div style={{ marginTop: 16 }}>
-          <ol style={{ paddingLeft: 20, color: "#374151", lineHeight: "1.6" }}>
-            <li>Go to your Shopify Admin → <strong>Online Store</strong> → <strong>Themes</strong> → <strong>Customize</strong>.</li>
-            <li>In the Theme Editor, click <strong>App embeds</strong> (left sidebar).</li>
-            <li>Find <strong>"Chat Assistant"</strong> and toggle it <strong>ON</strong>.</li>
-            <li>Click <strong>Save</strong> in the top right corner.</li>
-            <li>Your chat widget is now live! You can customize colors and text in the same sidebar.</li>
-          </ol>
-        </div>
-      </div>
-
       {/* Plans & Billing */}
       <div style={{ marginTop: 24, padding: 16, border: "1px solid #E5E7EB", borderRadius: 10, background: "#fff" }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
