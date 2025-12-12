@@ -89,13 +89,61 @@ export default function AppIndex() {
         </div>
         <p style={{ marginTop: 8, color: "#6B7280" }}>Prices shown in {currency}. Manage or upgrade your plan.</p>
 
-        {activePlan && (
-          <div style={{ marginTop: 12, padding: 12, background: "#F9FAFB", borderRadius: 6 }}>
-            <div style={{ fontSize: 14, fontWeight: 600, color: "#374151" }}>Current Usage</div>
-            <div style={{ fontSize: 24, fontWeight: 700, color: "#111827" }}>{usageCount} chats</div>
-            <div style={{ fontSize: 12, color: "#6B7280" }}>Resets monthly</div>
-          </div>
-        )}
+        {activePlan && (() => {
+          // Define limits per plan
+          const planLimits = {
+            "Basic Plan": 1000,
+            "Pro": 2500,
+            "Enterprise": 5000
+          };
+          const chatLimit = planLimits[activePlan] || 1000;
+          const usagePercent = Math.min((usageCount / chatLimit) * 100, 100);
+          const isNearLimit = usagePercent >= 80;
+          const isOverLimit = usageCount >= chatLimit;
+
+          return (
+            <div style={{ marginTop: 12, padding: 12, background: "#F9FAFB", borderRadius: 6 }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div style={{ fontSize: 14, fontWeight: 600, color: "#374151" }}>Current Usage</div>
+                <div style={{ fontSize: 12, color: "#6B7280" }}>Resets monthly</div>
+              </div>
+
+              <div style={{ fontSize: 24, fontWeight: 700, color: isOverLimit ? "#DC2626" : "#111827", marginTop: 4 }}>
+                {usageCount.toLocaleString()} / {chatLimit.toLocaleString()} chats
+              </div>
+
+              {/* Progress Bar */}
+              <div style={{ marginTop: 8, height: 8, background: "#E5E7EB", borderRadius: 4, overflow: "hidden" }}>
+                <div style={{
+                  width: `${usagePercent}%`,
+                  height: "100%",
+                  background: isOverLimit ? "#DC2626" : isNearLimit ? "#F59E0B" : "#10B981",
+                  borderRadius: 4,
+                  transition: "width 0.3s ease"
+                }} />
+              </div>
+
+              {isOverLimit && (
+                <div style={{
+                  marginTop: 12, padding: 10, borderRadius: 6,
+                  background: "#FEE2E2", color: "#991B1B", border: "1px solid #FECACA"
+                }}>
+                  <strong>⚠️ Chat limit reached!</strong> Your chat widget is disabled.
+                  <Link to="/app/additional" style={{ marginLeft: 4, color: "#991B1B", fontWeight: 600 }}>Upgrade your plan</Link>
+                </div>
+              )}
+
+              {isNearLimit && !isOverLimit && (
+                <div style={{
+                  marginTop: 12, padding: 10, borderRadius: 6,
+                  background: "#FEF3C7", color: "#92400E", border: "1px solid #FDE68A"
+                }}>
+                  <strong>⚠️ Approaching limit!</strong> You've used {Math.round(usagePercent)}% of your monthly chats.
+                </div>
+              )}
+            </div>
+          );
+        })()}
 
         <Link to="/app/additional"
           style={{

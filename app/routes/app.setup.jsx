@@ -23,12 +23,39 @@ export default function SetupPage() {
             <h1 style={{ marginTop: 8, fontSize: 24 }}>Setup Instructions</h1>
 
             <div style={{ marginTop: 24, padding: 20, border: "1px solid #E5E7EB", borderRadius: 10, background: "#fff" }}>
-                <h2 style={{ margin: 0, fontSize: 18, color: "#111827" }}>Enable Chat Assistant on Your Store</h2>
+                <h2 style={{ margin: 0, fontSize: 18, color: "#111827" }}>Step 1: Subscribe to a Plan</h2>
                 <p style={{ marginTop: 12, color: "#6B7280", lineHeight: 1.6 }}>
-                    Follow these simple steps to activate the chat widget on your storefront.
+                    The chat widget requires an active subscription to work on your store. Choose a plan that fits your needs:
+                </p>
+                <ul style={{ marginTop: 12, paddingLeft: 24, color: "#374151", lineHeight: 1.8 }}>
+                    <li><strong>Basic Plan</strong> – $9.99/month (1,000 chats)</li>
+                    <li><strong>Pro</strong> – $19.99/month (2,500 chats)</li>
+                    <li><strong>Enterprise</strong> – $49.99/month (5,000 chats)</li>
+                </ul>
+                <Link to="/app/additional"
+                    style={{
+                        display: "inline-block",
+                        marginTop: 16,
+                        padding: "12px 24px",
+                        background: "#111827",
+                        color: "#fff",
+                        borderRadius: 8,
+                        textDecoration: "none",
+                        fontWeight: 600,
+                        fontSize: 15
+                    }}
+                >
+                    View Plans & Subscribe
+                </Link>
+            </div>
+
+            <div style={{ marginTop: 24, padding: 20, border: "1px solid #E5E7EB", borderRadius: 10, background: "#fff" }}>
+                <h2 style={{ margin: 0, fontSize: 18, color: "#111827" }}>Step 2: Enable Chat Widget in Theme Editor</h2>
+                <p style={{ marginTop: 12, color: "#6B7280", lineHeight: 1.6 }}>
+                    After subscribing, enable the chat widget on your storefront:
                 </p>
 
-                <div style={{ marginTop: 24 }}>
+                <div style={{ marginTop: 16 }}>
                     <ol style={{ paddingLeft: 24, color: "#374151", lineHeight: 2, fontSize: 15 }}>
                         <li>
                             Click the <strong>"Open Theme Editor"</strong> button below.

@@ -100,15 +100,40 @@ export const action = async ({ request }) => {
           if (billingRes.ok) {
             const billingData = await billingRes.json();
             const subscriptions = billingData?.data?.currentAppInstallation?.activeSubscriptions || [];
-            const hasActivePlan = subscriptions.some(sub => sub.status === "ACTIVE");
+            const activeSub = subscriptions.find(sub => sub.status === "ACTIVE");
 
-            if (!hasActivePlan) {
+            if (!activeSub) {
               return json({
                 ok: false,
                 error: "NO_SUBSCRIPTION",
                 message: "This store doesn't have an active subscription. Please subscribe to a plan to use Chat Assistant."
               });
             }
+
+            // ========== CHAT LIMIT CHECK ==========
+            // Define limits per plan
+            const planLimits = {
+              "Basic Plan": 1000,
+              "Pro": 2500,
+              "Enterprise": 5000
+            };
+
+            const planName = activeSub.name;
+            const chatLimit = planLimits[planName] || 1000; // Default to Basic if unknown
+
+            // Check current usage
+            const currentMonth = new Date().toISOString().slice(0, 7);
+            const usageRecord = await prisma.chatUsage.findUnique({ where: { shop } });
+            const currentUsage = (usageRecord?.month === currentMonth) ? usageRecord.count : 0;
+
+            if (currentUsage >= chatLimit && action !== "check_subscription") {
+              return json({
+                ok: false,
+                error: "LIMIT_EXCEEDED",
+                message: `You've reached your monthly chat limit (${chatLimit} chats). Please upgrade your plan for more chats.`
+              });
+            }
+            // ========== END CHAT LIMIT CHECK ==========
           }
         }
       } catch (billingError) {
