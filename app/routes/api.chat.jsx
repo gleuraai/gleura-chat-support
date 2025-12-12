@@ -54,6 +54,76 @@ export const action = async ({ request }) => {
       return json({ ok: true, pong: true, shop });
     }
 
+    // Widget calls this on load to check if it should show
+    // Falls through to subscription check below which will return NO_SUBSCRIPTION if no plan
+    if (action === "check_subscription") {
+      // Continue to subscription check below - it will handle the response
+    }
+
+    // ========== SUBSCRIPTION CHECK ==========
+    // Verify the merchant has an active subscription before processing
+    if (shop && action !== "ping") {
+      try {
+        // Get the offline session for this shop
+        const session = await prisma.session.findFirst({
+          where: { shop, isOnline: false },
+          orderBy: { expires: 'desc' }
+        });
+
+        if (session?.accessToken) {
+          const apiVersion = process.env.SHOPIFY_API_VERSION || "2025-01";
+
+          // Check active subscriptions via GraphQL
+          const billingQuery = `
+            query {
+              currentAppInstallation {
+                activeSubscriptions {
+                  status
+                  name
+                }
+              }
+            }
+          `;
+
+          const billingRes = await fetch(
+            `https://${shop}/admin/api/${apiVersion}/graphql.json`,
+            {
+              method: "POST",
+              headers: {
+                "X-Shopify-Access-Token": session.accessToken,
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify({ query: billingQuery }),
+            }
+          );
+
+          if (billingRes.ok) {
+            const billingData = await billingRes.json();
+            const subscriptions = billingData?.data?.currentAppInstallation?.activeSubscriptions || [];
+            const hasActivePlan = subscriptions.some(sub => sub.status === "ACTIVE");
+
+            if (!hasActivePlan) {
+              return json({
+                ok: false,
+                error: "NO_SUBSCRIPTION",
+                message: "This store doesn't have an active subscription. Please subscribe to a plan to use Chat Assistant."
+              });
+            }
+          }
+        }
+      } catch (billingError) {
+        console.error("Billing check error:", billingError);
+        // Don't block on billing check errors - log and continue
+        // This prevents breaking the widget if there's a temporary API issue
+      }
+    }
+    // ========== END SUBSCRIPTION CHECK ==========
+
+    // For check_subscription action, if we got here it means subscription is active
+    if (action === "check_subscription") {
+      return json({ ok: true, hasSubscription: true, shop });
+    }
+
     // Helper to log usage
     const logUsage = async (responsePayload) => {
       if (shop && action !== "ping") {

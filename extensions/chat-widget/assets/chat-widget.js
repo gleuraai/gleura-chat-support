@@ -677,12 +677,60 @@ class SimpleAIChatWidget {
   }
 }
 
-// Boot
-(function init() {
+// Boot - Check subscription before initializing
+(async function init() {
   const run = () => new SimpleAIChatWidget();
+
+  // Wait for DOM
   if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", run, { once: true });
-  } else {
+    await new Promise(resolve => document.addEventListener("DOMContentLoaded", resolve, { once: true }));
+  }
+
+  // Get shop from data element
+  const dataEl = document.getElementById("ai-chat-data");
+  if (!dataEl) {
+    console.error("❌ ai-chat-data missing - widget not initialized");
+    return;
+  }
+
+  const shop = dataEl.dataset.shop || "";
+  if (!shop) {
+    console.error("❌ Shop not found - widget not initialized");
+    return;
+  }
+
+  // Check subscription status before showing widget
+  const apiPaths = ["/apps/chat", "/api/chat"];
+  let hasSubscription = false;
+
+  for (const url of apiPaths) {
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "check_subscription", shop }),
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        // If we get NO_SUBSCRIPTION error, don't show widget
+        if (data.error === "NO_SUBSCRIPTION") {
+          console.log("⚠️ No active subscription - widget hidden");
+          return; // Don't initialize widget
+        }
+        // If we get any other response (including pong or success), subscription is active
+        hasSubscription = true;
+        break;
+      }
+    } catch (err) {
+      console.warn(`[AIW] Subscription check failed for ${url}`, err);
+    }
+  }
+
+  // Only initialize widget if subscription is active
+  if (hasSubscription) {
     run();
+  } else {
+    console.log("⚠️ Could not verify subscription - widget hidden for safety");
   }
 })();
