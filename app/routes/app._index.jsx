@@ -82,24 +82,12 @@ export default function AppIndex() {
 
         <div style={{ marginTop: 16 }}>
           <ol style={{ paddingLeft: 20, color: "#374151", lineHeight: "1.6" }}>
-            <li>Click the <strong>Enable Chat Widget</strong> button below. This will open your Theme Editor.</li>
-            <li>In the Theme Editor, ensure the <strong>"AI Chat Assistant"</strong> app embed is toggled <strong>ON</strong> (it should be enabled automatically).</li>
-            <li>Click <strong>Save</strong> in the top right corner of the Theme Editor.</li>
-            <li>Your chat widget is now live! You can customize colors and text in the same Theme Editor sidebar.</li>
+            <li>Go to your Shopify Admin → <strong>Online Store</strong> → <strong>Themes</strong> → <strong>Customize</strong>.</li>
+            <li>In the Theme Editor, click <strong>App embeds</strong> (left sidebar).</li>
+            <li>Find <strong>"Chat Assistant"</strong> and toggle it <strong>ON</strong>.</li>
+            <li>Click <strong>Save</strong> in the top right corner.</li>
+            <li>Your chat widget is now live! You can customize colors and text in the same sidebar.</li>
           </ol>
-
-          <a
-            href={`https://admin.shopify.com/store/${useLoaderData().shopName || "my-store"}/themes/current/editor?context=apps&activateAppId=288ab506-3769-fe13-0858-10bbb247f01cb0ff7c2a/chat-widget`}
-            target="_blank"
-            rel="noopener noreferrer"
-            style={{
-              display: "inline-block", marginTop: 16, padding: "10px 16px",
-              background: "#2563EB", color: "#fff", borderRadius: 6,
-              textDecoration: "none", fontWeight: 600
-            }}
-          >
-            Enable Chat Widget
-          </a>
         </div>
       </div>
 

@@ -39,7 +39,6 @@ const PLANS = [
       "Up to 2,500 chats / month",
       "Effective cost: ≈ $0.008 per chat",
       "Order tracking by order number / mobile",
-      "“Powered by” branding removed",
       "Priority Email support"
     ],
     cta: "Upgrade to Pro"
@@ -52,18 +51,17 @@ const PLANS = [
       "Up to 5,000 chats / month",
       "Effective cost: ≈ $0.01 per chat",
       "Order tracking by order number / mobile",
-      "“Powered by” branding removed",
-      "Dedicated Support",
-      "Custom Features"
+      "Dedicated Support"
     ],
     cta: "Upgrade to Enterprise"
   }
 ];
 
 export async function loader({ request }) {
-  const { billing } = await authenticate.admin(request);
+  const { billing, session } = await authenticate.admin(request);
   const url = new URL(request.url);
   const installed = url.searchParams.get("installed") === "1";
+  const shop = session?.shop;
 
   try {
     const billingCheck = await billing.check({
@@ -80,31 +78,39 @@ export async function loader({ request }) {
       activePlan = activeSub.name;
     }
 
-    return json({ activePlan, installed });
+    return json({ activePlan, installed, shop });
   } catch (error) {
     console.error("DEBUG: Billing Check Failed:", error);
-    return json({ activePlan: null, installed, error: error.message });
+    return json({ activePlan: null, installed, error: error.message, shop });
   }
 }
 
 export async function action({ request }) {
-  const { billing } = await authenticate.admin(request);
+  const { billing, session } = await authenticate.admin(request);
   const form = await request.formData();
   const plan = form.get("plan");
+  const formShop = form.get("shop");
 
   if (!plan) {
     return json({ error: "No plan selected" }, { status: 400 });
   }
 
-  // Ensure appUrl is correctly formatted
-  let appUrl = (process.env.SHOPIFY_APP_URL || "https://j2paxwkmmd.eu-central-1.awsapprunner.com").replace(/\/$/, "");
+  // Get shop from session OR form to persist context absolutely
+  const shop = session?.shop || formShop;
 
-  // Use the correct return URL based on where the user initiated the action
-  // If we are on app/additional, return there. If on app/pricing, return there.
-  // For now, we default to app/additional as that's this file's route.
-  const returnUrl = `${appUrl}/app/additional?installed=1`;
+  if (!shop) {
+    console.error("CRITICAL: Shop is missing in billing action!");
+    return json({ error: "Shop context lost. Please refresh and try again." }, { status: 400 });
+  }
 
-  console.log(`DEBUG: Requesting billing for plan: ${plan}, returnUrl: ${returnUrl}`);
+  // For EMBEDDED apps, the returnUrl MUST go through Shopify Admin, not directly to the app URL.
+  // This is critical to maintain the embedded session context.
+  // Format: https://admin.shopify.com/store/{shop-name}/apps/{app-handle}/path
+  const shopName = shop.replace(".myshopify.com", "");
+  const appHandle = "gleura-chat-support"; // This matches your shopify.app.toml handle
+  const returnUrl = `https://admin.shopify.com/store/${shopName}/apps/${appHandle}/app/additional?installed=1`;
+
+  console.log(`DEBUG: Requesting billing for plan: ${plan}, returnUrl: ${returnUrl}, shop: ${shop}`);
 
   try {
     const { confirmationUrl } = await billing.request({
@@ -186,6 +192,7 @@ export default function AdditionalPage() {
 
                 <Form method="post" style={{ marginTop: 16 }}>
                   <input type="hidden" name="plan" value={p.name} />
+                  <input type="hidden" name="shop" value={useLoaderData().shop} />
                   <button
                     type="submit"
                     disabled={isActive}
