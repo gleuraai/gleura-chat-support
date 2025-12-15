@@ -21,18 +21,18 @@ const shopify = shopifyApp({
   // Billing configuration (Manual Pricing)
   billing: {
     "Basic Plan": {
-      amount: 9.99,
+      amount: 4.99,
       currencyCode: "USD",
       interval: "EVERY_30_DAYS",
       trialDays: 1,
     },
     "Pro": {
-      amount: 19.99,
+      amount: 9.99,
       currencyCode: "USD",
       interval: "EVERY_30_DAYS",
     },
     "Enterprise": {
-      amount: 49.99,
+      amount: 24.99,
       currencyCode: "USD",
       interval: "EVERY_30_DAYS",
     },

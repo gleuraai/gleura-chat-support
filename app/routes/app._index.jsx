@@ -14,7 +14,7 @@ export async function loader({ request }) {
     const plans = ["Basic Plan", "Pro", "Enterprise"];
     let activePlan = null;
     try {
-      const status = await billing.check({ isTest: true, plans });
+      const status = await billing.check({ isTest: false, plans });
       const activeSub = status?.appSubscriptions?.find(s => s.status === "ACTIVE");
       if (activeSub) activePlan = activeSub.name;
     } catch (e) {

@@ -28,9 +28,9 @@ export default function SetupPage() {
                     The chat widget requires an active subscription to work on your store. Choose a plan that fits your needs:
                 </p>
                 <ul style={{ marginTop: 12, paddingLeft: 24, color: "#374151", lineHeight: 1.8 }}>
-                    <li><strong>Basic Plan</strong> – $9.99/month (1,000 chats)</li>
-                    <li><strong>Pro</strong> – $19.99/month (2,500 chats)</li>
-                    <li><strong>Enterprise</strong> – $49.99/month (5,000 chats)</li>
+                    <li><strong>Basic Plan</strong> – $4.99/month (1,000 chats)</li>
+                    <li><strong>Pro</strong> – $9.99/month (2,500 chats)</li>
+                    <li><strong>Enterprise</strong> – $24.99/month (5,000 chats)</li>
                 </ul>
                 <Link to="/app/additional"
                     style={{

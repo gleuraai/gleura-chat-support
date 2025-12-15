@@ -20,12 +20,12 @@ const BASE_PLANS = [
 const PLANS = [
   {
     name: "Basic Plan",
-    price: "$9.99 / month",
+    price: "$4.99 / month",
     chats: "Up to 1,000 chats / month",
     features: [
       "1-day free trial",
       "Up to 1,000 chats / month",
-      "Effective cost: ≈ $0.01 per chat",
+      "Effective cost: ≈ $0.005 per chat",
       "Order tracking by order number / mobile",
       "Email support"
     ],
@@ -33,11 +33,11 @@ const PLANS = [
   },
   {
     name: "Pro",
-    price: "$19.99 / month",
+    price: "$9.99 / month",
     chats: "Up to 2,500 chats / month",
     features: [
       "Up to 2,500 chats / month",
-      "Effective cost: ≈ $0.008 per chat",
+      "Effective cost: ≈ $0.004 per chat",
       "Order tracking by order number / mobile",
       "Priority Email support"
     ],
@@ -45,11 +45,11 @@ const PLANS = [
   },
   {
     name: "Enterprise",
-    price: "$49.99 / month",
+    price: "$24.99 / month",
     chats: "Up to 5,000 chats / month",
     features: [
       "Up to 5,000 chats / month",
-      "Effective cost: ≈ $0.01 per chat",
+      "Effective cost: ≈ $0.005 per chat",
       "Order tracking by order number / mobile",
       "Dedicated Support"
     ],
@@ -65,7 +65,7 @@ export async function loader({ request }) {
 
   try {
     const billingCheck = await billing.check({
-      isTest: true,
+      isTest: false,
       plans: ["Basic Plan", "Pro", "Enterprise"],
       returnObject: true,
     });
@@ -115,7 +115,7 @@ export async function action({ request }) {
   try {
     const { confirmationUrl } = await billing.request({
       plan: plan,
-      isTest: true,
+      isTest: false,
       returnUrl: returnUrl,
     });
     // This line might be unreachable if billing.request throws a redirect, 
