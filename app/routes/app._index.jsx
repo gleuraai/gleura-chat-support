@@ -32,7 +32,7 @@ export async function loader({ request }) {
       recentChats = await prisma.chatSession.findMany({
         where: { shop },
         orderBy: { createdAt: "desc" },
-        take: 5
+        take: 10
       });
     } catch (error) {
       console.error("Dashboard Loader Error (Prisma):", error);
@@ -165,37 +165,129 @@ export default function AppIndex() {
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {recentChats.map(chat => {
-                let details = "—";
+                // Parse payload and response
+                let customerMessage = "—";
+                let botResponse = "—";
                 try {
                   const p = JSON.parse(chat.payload);
                   if (chat.action === "track_order") {
-                    details = `Track Order ${p.orderNumber || ""} (Phone: ${p.phoneNumber || "—"})`;
-                  } else if (chat.action === "discounts") {
-                    details = "Requested discount codes";
+                    customerMessage = `Order #${p.orderNumber || "—"} (Phone: ${p.phoneNumber || "—"})`;
                   } else if (p.message) {
-                    details = `Message: "${p.message}"`;
-                  } else {
-                    details = JSON.stringify(p);
+                    customerMessage = p.message;
+                  } else if (p.orderNumber) {
+                    customerMessage = `Order: ${p.orderNumber}`;
                   }
                 } catch (e) {
-                  details = chat.payload;
+                  customerMessage = chat.payload || "—";
                 }
 
+                try {
+                  const r = JSON.parse(chat.response);
+                  if (r.response) {
+                    // Strip HTML tags for preview
+                    botResponse = r.response.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim();
+                  } else if (r.message) {
+                    botResponse = r.message;
+                  } else if (r.order) {
+                    botResponse = `Order ${r.order.name} - ${r.order.status || "Found"}`;
+                  } else if (r.error) {
+                    botResponse = `Error: ${r.error}`;
+                  }
+                } catch (e) {
+                  botResponse = "—";
+                }
+
+                // Better action labels with colors
+                const actionLabels = {
+                  "track_order": { label: "Track Order", bg: "#DBEAFE", color: "#1E40AF" },
+                  "discounts": { label: "Discounts", bg: "#FEF3C7", color: "#92400E" },
+                  "product_inquiry": { label: "Product Inquiry", bg: "#E0E7FF", color: "#3730A3" },
+                  "how_to_order": { label: "How to Order", bg: "#D1FAE5", color: "#065F46" },
+                  "order_status_hint": { label: "Order Status", bg: "#DBEAFE", color: "#1E40AF" },
+                  "cancellation": { label: "Return/Cancel", bg: "#FEE2E2", color: "#991B1B" },
+                  "product_recommendation": { label: "Product Help", bg: "#FCE7F3", color: "#9D174D" },
+                  "contact_support": { label: "Support", bg: "#E0E7FF", color: "#3730A3" },
+                  "discount_query": { label: "Discounts", bg: "#FEF3C7", color: "#92400E" },
+                  "greeting": { label: "Greeting", bg: "#D1FAE5", color: "#065F46" },
+                  "general_query": { label: "General", bg: "#F3F4F6", color: "#374151" },
+                  "unknown": { label: "Query", bg: "#F3F4F6", color: "#374151" }
+                };
+
+                const actionInfo = actionLabels[chat.action] || actionLabels.unknown;
+
                 return (
-                  <div key={chat.id} style={{ padding: 12, border: "1px solid #E5E7EB", borderRadius: 6 }}>
-                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 12, color: "#6B7280" }}>
-                      <span>{new Date(chat.createdAt).toLocaleString()}</span>
-                      <span style={{
-                        textTransform: "uppercase", fontSize: 10, fontWeight: 700,
-                        padding: "2px 6px", borderRadius: 4, background: "#F3F4F6", color: "#374151"
-                      }}>
-                        {chat.action?.replace("_", " ") || "UNKNOWN"}
-                      </span>
+                  <details key={chat.id} style={{
+                    border: "1px solid #E5E7EB",
+                    borderRadius: 8,
+                    overflow: "hidden",
+                    background: "#fff"
+                  }}>
+                    <summary style={{
+                      padding: 12,
+                      cursor: "pointer",
+                      display: "flex",
+                      alignItems: "flex-start",
+                      gap: 12,
+                      listStyle: "none"
+                    }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8 }}>
+                          <span style={{ fontSize: 12, color: "#6B7280" }}>
+                            {new Date(chat.createdAt).toLocaleString()}
+                          </span>
+                          <span style={{
+                            fontSize: 10, fontWeight: 700,
+                            padding: "3px 8px", borderRadius: 4,
+                            background: actionInfo.bg, color: actionInfo.color,
+                            textTransform: "uppercase", letterSpacing: "0.5px"
+                          }}>
+                            {actionInfo.label}
+                          </span>
+                        </div>
+                        <div style={{
+                          marginTop: 6,
+                          fontSize: 14,
+                          color: "#111827",
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis"
+                        }}>
+                          <strong>Customer:</strong> {customerMessage.length > 60 ? customerMessage.slice(0, 60) + "..." : customerMessage}
+                        </div>
+                        <div style={{
+                          marginTop: 4,
+                          fontSize: 13,
+                          color: "#6B7280",
+                          whiteSpace: "nowrap",
+                          overflow: "hidden",
+                          textOverflow: "ellipsis"
+                        }}>
+                          <strong>Bot:</strong> {botResponse.length > 70 ? botResponse.slice(0, 70) + "..." : botResponse}
+                        </div>
+                      </div>
+                      <span style={{ color: "#9CA3AF", fontSize: 12, flexShrink: 0 }}>▼</span>
+                    </summary>
+                    <div style={{
+                      padding: "12px 16px",
+                      borderTop: "1px solid #E5E7EB",
+                      background: "#F9FAFB",
+                      fontSize: 13,
+                      lineHeight: 1.6
+                    }}>
+                      <div style={{ marginBottom: 12 }}>
+                        <div style={{ fontWeight: 600, color: "#374151", marginBottom: 4 }}>Customer Message:</div>
+                        <div style={{ color: "#111827", background: "#fff", padding: 8, borderRadius: 6, border: "1px solid #E5E7EB" }}>
+                          {customerMessage}
+                        </div>
+                      </div>
+                      <div>
+                        <div style={{ fontWeight: 600, color: "#374151", marginBottom: 4 }}>Bot Response:</div>
+                        <div style={{ color: "#111827", background: "#fff", padding: 8, borderRadius: 6, border: "1px solid #E5E7EB" }}
+                          dangerouslySetInnerHTML={{ __html: botResponse }}
+                        />
+                      </div>
                     </div>
-                    <div style={{ marginTop: 4, fontSize: 14, color: "#111827", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                      {details}
-                    </div>
-                  </div>
+                  </details>
                 );
               })}
             </div>

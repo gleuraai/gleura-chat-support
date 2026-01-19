@@ -332,17 +332,154 @@ export const action = async ({ request }) => {
       return json(payload);
     }
 
-    // Handle generic messages (missing action)
-    if (!action && body?.message) {
-      const payload = {
-        ok: true,
-        response: "I can help with Track Order, Return/Exchange, Discounts, Shipping & Delivery, or Connect to Support."
+    // ========== SMART MESSAGE HANDLING ==========
+    // Keyword-based intent detection for free-text messages (zero API cost)
+    const detectIntent = (message) => {
+      if (!message) return { intent: "general", confidence: "low" };
+      const lower = message.toLowerCase();
+
+      // Price/Cost queries (English + Hindi/Hinglish)
+      if (/price|cost|how much|kitna|kya rate|rate kya|pricing|charges/.test(lower)) {
+        return { intent: "product_inquiry", confidence: "high" };
+      }
+
+      // How to order queries (English + Hindi/Hinglish)
+      if (/how to order|kaise order|how to buy|kaise kharide|ordering|place order/.test(lower)) {
+        return { intent: "how_to_order", confidence: "high" };
+      }
+
+      // Order status/tracking hints
+      if (/where is my|track|status|kahan|kidhar|order aa gaya|delivery|shipped/.test(lower)) {
+        return { intent: "order_status_hint", confidence: "high" };
+      }
+
+      // Cancellation/Refund queries
+      if (/cancel|refund|money back|return|exchange|vapas|wapas/.test(lower)) {
+        return { intent: "cancellation", confidence: "high" };
+      }
+
+      // Product recommendation queries
+      if (/recommend|suggest|best|which|product for|skin|hair|dry|oily|acne/.test(lower)) {
+        return { intent: "product_recommendation", confidence: "medium" };
+      }
+
+      // Contact/Support queries
+      if (/contact|support|help|call|email|phone|whatsapp|talk to/.test(lower)) {
+        return { intent: "contact_support", confidence: "high" };
+      }
+
+      // Discount queries
+      if (/discount|coupon|offer|code|promo|deal|sale/.test(lower)) {
+        return { intent: "discount_query", confidence: "high" };
+      }
+
+      // Greeting
+      if (/^(hi|hello|hey|hii|hiii|namaste|good morning|good evening)/.test(lower)) {
+        return { intent: "greeting", confidence: "high" };
+      }
+
+      return { intent: "general", confidence: "low" };
+    };
+
+    // Smart responses for each intent
+    const getSmartResponse = (intent, originalMessage) => {
+      const responses = {
+        product_inquiry: {
+          ok: true,
+          response: "For product prices, please browse our store directly. You can find all products with their current prices on our website. Is there anything specific you're looking for?",
+          action: "product_inquiry"
+        },
+        how_to_order: {
+          ok: true,
+          response: "<b>How to Place an Order:</b><br>1. Browse our products on the website<br>2. Add items to your cart<br>3. Click on Cart → Checkout<br>4. Enter your shipping details<br>5. Complete payment<br><br>Need help with something specific?",
+          action: "how_to_order"
+        },
+        order_status_hint: {
+          ok: true,
+          response: "I can help you track your order! Please use the <b>Track Order</b> button and provide your order number and phone number to check your order status.",
+          action: "order_status_hint"
+        },
+        cancellation: {
+          ok: true,
+          response: "For cancellations, returns, or refunds, please use the <b>Return / Exchange</b> option or contact our support team with your order number. We'll be happy to help!",
+          action: "cancellation"
+        },
+        product_recommendation: {
+          ok: true,
+          response: "I'd love to help you find the right product! For personalized recommendations, please browse our product categories on the website or contact our support team who can guide you better.",
+          action: "product_recommendation"
+        },
+        contact_support: {
+          ok: true,
+          response: "You can reach our support team using the <b>Connect to Support</b> button above. We're here to help!",
+          action: "contact_support"
+        },
+        discount_query: {
+          ok: true,
+          response: "<b>Current Offers:</b><br>• SAVE10 — 10% off<br>• HOLIDAY20 — 20% off orders over ₹4,000<br>• NEWBIE15 — 15% off for new customers<br><br>Apply these codes at checkout!",
+          action: "discount_query"
+        },
+        greeting: {
+          ok: true,
+          response: "Hello! 👋 I'm here to help you with:<br>• <b>Track Order</b> — Check your order status<br>• <b>Return/Exchange</b> — Start a return<br>• <b>Discounts</b> — View current offers<br>• <b>Shipping</b> — Delivery information<br>• <b>Support</b> — Connect with our team<br><br>How can I assist you today?",
+          action: "greeting"
+        },
+        general: {
+          ok: true,
+          response: "I can help you with:<br>• <b>Track Order</b> — Check order status<br>• <b>Return/Exchange</b> — Returns & refunds<br>• <b>Discounts</b> — Current offers<br>• <b>Shipping</b> — Delivery info<br>• <b>Support</b> — Contact us<br><br>Please use the buttons above or tell me what you need!",
+          action: "general_query"
+        }
       };
-      await logUsage(payload);
+
+      return responses[intent] || responses.general;
+    };
+
+    // Handle generic messages (missing action) with smart detection
+    if (!action && body?.message) {
+      const { intent } = detectIntent(body.message);
+      const smartResponse = getSmartResponse(intent, body.message);
+
+      const payload = {
+        ok: smartResponse.ok,
+        response: smartResponse.response
+      };
+
+      // Log with detected intent as action (not "unknown")
+      await prisma.chatSession.create({
+        data: {
+          shop,
+          action: smartResponse.action || intent,
+          payload: JSON.stringify(body),
+          response: JSON.stringify(payload)
+        }
+      });
+
+      // Update usage count
+      if (shop) {
+        try {
+          const currentMonth = new Date().toISOString().slice(0, 7);
+          const usage = await prisma.chatUsage.findUnique({ where: { shop } });
+          if (usage && usage.month === currentMonth) {
+            await prisma.chatUsage.update({
+              where: { shop },
+              data: { count: { increment: 1 } }
+            });
+          } else {
+            await prisma.chatUsage.upsert({
+              where: { shop },
+              update: { count: 1, month: currentMonth },
+              create: { shop, count: 1, month: currentMonth }
+            });
+          }
+        } catch (err) {
+          console.error("Failed to update usage:", err);
+        }
+      }
+
       return json(payload);
     }
 
-    // Unknown action
+    // Unknown action (button-based actions that don't match)
     const responsePayload = { ok: false, error: "UNKNOWN_ACTION", message: "I didn't understand that action. Please try using the menu buttons." };
     await logUsage(responsePayload);
     return json(responsePayload);
