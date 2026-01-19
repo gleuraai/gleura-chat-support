@@ -67,7 +67,7 @@ export default function LeadsPage() {
     return (
         <div style={{ padding: 24, fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial" }}>
             <Link to="/app" style={{ textDecoration: "none", color: "#2563EB" }}>← Back to Dashboard</Link>
-            <h1 style={{ marginTop: 8, fontSize: 24 }}>Customer Leads</h1>
+            <h1 style={{ marginTop: 8, fontSize: 24 }}>Customer Inbox</h1>
             <p style={{ color: "#6B7280", marginTop: 4 }}>
                 Customers who requested a callback. Showing last 7 days only.
             </p>
