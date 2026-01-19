@@ -282,6 +282,122 @@ class SimpleAIChatWidget {
     this.scrollToBottom();
   }
 
+  // ========== LEAD CAPTURE ==========
+  showLeadCaptureOffer() {
+    this.addFollowUps([
+      { label: "📞 Request Callback", onClick: () => this.showLeadForm() },
+      { label: "Track Order", onClick: () => this.startTrack() },
+      { label: "Connect to Support", onClick: () => this.showOwnerMsg(`Phone: ${this.settings.supportPhone || "—"}<br>Email: ${this.settings.supportEmail || "—"}`) }
+    ]);
+  }
+
+  showLeadForm() {
+    const container = this.messagesEl();
+    this.lastQuestion = this.state.lastMessage || "General inquiry";
+
+    const formWrapper = document.createElement("div");
+    formWrapper.id = "aiw-lead-form";
+    Object.assign(formWrapper.style, {
+      margin: "12px 0 12px 44px",
+      padding: "16px",
+      background: "#F8FAFC",
+      border: "1px solid #E5E7EB",
+      borderRadius: "12px",
+      maxWidth: "78%"
+    });
+
+    formWrapper.innerHTML = `
+      <div style="font-weight:600; margin-bottom:12px; color:#111827;">Request a Callback</div>
+      <div style="font-size:13px; color:#6B7280; margin-bottom:12px;">Our team will contact you shortly to help with your query.</div>
+      <div style="display:flex; flex-direction:column; gap:10px;">
+        <input type="text" id="aiw-lead-name" placeholder="Your Name *" 
+          style="padding:10px 12px; border:1px solid #E5E7EB; border-radius:8px; font-size:14px; outline:none;" />
+        <input type="tel" id="aiw-lead-phone" placeholder="Phone Number *" 
+          style="padding:10px 12px; border:1px solid #E5E7EB; border-radius:8px; font-size:14px; outline:none;" />
+        <input type="email" id="aiw-lead-email" placeholder="Email (Optional)" 
+          style="padding:10px 12px; border:1px solid #E5E7EB; border-radius:8px; font-size:14px; outline:none;" />
+        <button id="aiw-lead-submit" style="
+          padding:12px; background:${this.settings.primaryColor}; color:#fff; border:none; 
+          border-radius:8px; font-weight:600; cursor:pointer; font-size:14px;
+        ">Submit Request</button>
+      </div>
+    `;
+
+    container.appendChild(formWrapper);
+    this.scrollToBottom();
+
+    // Bind submit handler
+    document.getElementById("aiw-lead-submit")?.addEventListener("click", () => this.submitLead());
+
+    // Allow Enter key in last field to submit
+    document.getElementById("aiw-lead-email")?.addEventListener("keypress", (e) => {
+      if (e.key === "Enter") this.submitLead();
+    });
+  }
+
+  async submitLead() {
+    const name = document.getElementById("aiw-lead-name")?.value?.trim();
+    const phone = document.getElementById("aiw-lead-phone")?.value?.trim();
+    const email = document.getElementById("aiw-lead-email")?.value?.trim();
+
+    if (!name) {
+      alert("Please enter your name");
+      return;
+    }
+    if (!phone || phone.replace(/\D/g, "").length < 10) {
+      alert("Please enter a valid phone number");
+      return;
+    }
+
+    // Remove the form
+    document.getElementById("aiw-lead-form")?.remove();
+
+    // Show typing indicator
+    const stop = this.showTyping(this.messagesEl());
+
+    try {
+      for (const url of this.apiCandidates) {
+        try {
+          const res = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              action: "submit_lead",
+              name,
+              phone,
+              email: email || null,
+              question: this.lastQuestion || "General inquiry",
+              shop: this.shop
+            })
+          });
+
+          if (res.ok) {
+            const data = await res.json();
+            stop();
+
+            if (data.ok) {
+              this.addAssistantBubble(this.messagesEl(),
+                "Thank you! 🙏 Our team will contact you shortly.<br><br>" +
+                `<b>${this.esc(name)}</b><br>📞 ${this.esc(phone)}${email ? `<br>✉️ ${this.esc(email)}` : ""}`
+              );
+            } else {
+              this.addAssistantBubble(this.messagesEl(), data.message || "Something went wrong. Please try again.");
+            }
+            return;
+          }
+        } catch (err) {
+          console.warn(`[AIW] Lead submit failed for ${url}`, err);
+        }
+      }
+
+      stop();
+      this.addAssistantBubble(this.messagesEl(), "Sorry, there was an issue. Please try again or use the support contact above.");
+    } catch (err) {
+      stop();
+      this.addAssistantBubble(this.messagesEl(), "Sorry, there was an issue. Please try again.");
+    }
+  }
+
   addCrumb(stepText) {
     const el = document.createElement("div");
     Object.assign(el.style, { margin: "6px 0 4px 44px", fontSize: "11px", color: "#64748b" });
@@ -337,7 +453,14 @@ class SimpleAIChatWidget {
       }
     }
 
+    // Store the last message for lead capture
+    this.state.lastMessage = text;
+
+    // Call API and then show lead capture offer for general messages
     await this.apiCall({ message: text }, "I can help with Track Order, Return/Exchange, Discounts, Shipping & Delivery, or Connect to Support.");
+
+    // Show lead capture offer for free-text messages
+    this.showLeadCaptureOffer();
   }
 
   // ---------- API (Robust version) ----------

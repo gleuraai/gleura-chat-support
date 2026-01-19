@@ -47,3 +47,16 @@ model ChatUsage {
   month     String
   updatedAt DateTime @updatedAt
 }
+
+model CustomerLead {
+  id        String   @id @default(uuid())
+  shop      String
+  name      String
+  phone     String
+  email     String?
+  question  String
+  status    String   @default("pending") // pending, contacted, resolved
+  createdAt DateTime @default(now())
+  
+  @@index([shop, createdAt])
+}

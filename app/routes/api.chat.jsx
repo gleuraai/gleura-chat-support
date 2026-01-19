@@ -49,9 +49,50 @@ export const action = async ({ request }) => {
     const { action, orderNumber, phoneNumber } = body || {};
 
     // Simple health check so you can test quickly in DevTools:
-    // fetch('/apps/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'ping'})}).then(r=>r.json()).then(console.log)
+    // fetch('/apps/chat',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({action:'ping'})}).then(r=>er.json()).then(console.log)
     if (action === "ping") {
       return json({ ok: true, pong: true, shop });
+    }
+
+    // ========== LEAD CAPTURE ==========
+    // Save customer contact info when they couldn't find their answer
+    if (action === "submit_lead") {
+      const { name, phone, email, question } = body || {};
+
+      if (!shop) {
+        return json({ ok: false, error: "MISSING_SHOP", message: "Unable to identify store." });
+      }
+
+      if (!name || !phone) {
+        return json({ ok: false, error: "MISSING_INFO", message: "Please provide your name and phone number." });
+      }
+
+      // Validate phone (basic check for 10 digits)
+      const cleanPhone = (phone || "").replace(/\D/g, "");
+      if (cleanPhone.length < 10) {
+        return json({ ok: false, error: "INVALID_PHONE", message: "Please provide a valid phone number." });
+      }
+
+      try {
+        await prisma.customerLead.create({
+          data: {
+            shop,
+            name: String(name).trim(),
+            phone: cleanPhone,
+            email: email ? String(email).trim() : null,
+            question: question ? String(question).trim() : "General inquiry",
+            status: "pending"
+          }
+        });
+
+        return json({
+          ok: true,
+          response: "Thank you! Our team will contact you shortly. 🙏"
+        });
+      } catch (err) {
+        console.error("Failed to save lead:", err);
+        return json({ ok: false, error: "SAVE_FAILED", message: "Something went wrong. Please try again." });
+      }
     }
 
     // Widget calls this on load to check if it should show
